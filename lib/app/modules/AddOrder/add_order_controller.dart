@@ -3,6 +3,7 @@ import 'package:billkaro/app/Database/app_database.dart' as dbs;
 import 'package:billkaro/app/modules/AddOrder/confirm_order_dialog.dart';
 import 'package:billkaro/app/modules/AddOrder/quick_addItem_bottomsheet.dart';
 import 'package:billkaro/app/modules/AddOrder/wallet_balance_alert_dialog.dart';
+import 'package:billkaro/app/modules/AddOrder/low_stock_alert_dialog.dart';
 import 'package:billkaro/app/modules/BusinessOverview/business_overview_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
@@ -31,12 +32,15 @@ import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
+import 'package:billkaro/app/services/local_store/local_store_client.dart';
+import 'package:billkaro/app/services/sync/bill_number_allocator.dart';
 import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
+import 'package:billkaro/utils/offline/offline_mode.dart';
 import 'package:billkaro/utils/offline/offline_table_loader.dart';
 import 'dart:async';
 import 'dart:io';
@@ -436,7 +440,11 @@ class AddOrderController extends BaseController {
         appPref: appPref,
         apiClient: apiClient,
       );
-      if (shouldExit) Get.back();
+      if (shouldExit) {
+        Get.back();
+        return;
+      }
+      await maybeShowLowStockAlert(appPref: appPref, apiClient: apiClient);
     });
   }
 
@@ -2930,7 +2938,14 @@ class AddOrderController extends BaseController {
 
     final payload = _buildCartPayload();
 
+    // Never route through LAN client mode while this PC is the store host.
+    final joinedHost =
+        appPref.localStoreClientJoined && !appPref.localStoreHostEnabled;
     final hasInternet = await NetworkUtils.hasInternetConnection();
+    if (!hasInternet && !OfflineMode.isEnabled && !joinedHost) {
+      showError(description: loc.offline_mode_disabled);
+      return;
+    }
 
     String? finalBillNumber;
     if (isEdit.value) {
@@ -2938,11 +2953,11 @@ class AddOrderController extends BaseController {
       if (finalBillNumber == null || finalBillNumber.isEmpty) {
         finalBillNumber = orders?.billNumber;
       }
-    } else if (!hasInternet) {
-      // Offline only — local placeholder until sync; server reassigns on upload.
-      finalBillNumber = await _offlineBillPreview();
+    } else if (!hasInternet || joinedHost) {
+      // Offline or LAN host mode: reserve so multi-till stays unique.
+      finalBillNumber = await _reserveUniqueBillNumber();
     }
-    // Online new orders: billNumber is null — server assigns atomically.
+    // Online new orders (not joined): billNumber is null — server assigns.
 
     List<SplitPayment>? splitPaymentsList;
     if (orderDetails['splitPayments'] != null) {
@@ -2982,6 +2997,25 @@ class AddOrderController extends BaseController {
     final shouldUpdate =
         isEdit.value && existingOrderId != null && existingOrderId.isNotEmpty;
 
+    // Petpooja-style: when joined to store host, host DB is source of truth.
+    // If host is down / prefs are stale, fall through to normal online/offline save.
+    if (joinedHost) {
+      final savedOnHost = await _completeHostLanOrderSave(
+        request: request,
+        localStatusForUi: localStatusForUi,
+        normalizedStatus: normalizedStatus,
+        isHoldOnly: isHoldOnly,
+        isBilling: isBilling,
+        stayOnScreen: stayOnScreen,
+        sendToKitchen: sendToKitchen,
+        shouldPrintKot: shouldPrintKot,
+        kotDeltaForPrint: kotDeltaForPrint,
+        chargePlatformFee: chargePlatformFee,
+        existingOrderId: shouldUpdate ? existingOrderId : null,
+      );
+      if (savedOnHost) return;
+    }
+
     Map<String, dynamic> withPlatformFee(Map<String, dynamic> body) {
       if (!chargePlatformFee) return body;
       return {...body, 'chargePlatformFee': true};
@@ -2997,7 +3031,7 @@ class AddOrderController extends BaseController {
           ? 'Bill #$billNumber'
           : 'Order';
       if (online) {
-        await PlatformFeeService.refreshWalletIfPossible();
+        unawaited(PlatformFeeService.refreshWalletIfPossible());
       } else {
         PlatformFeeService.debitLocal(
           appPref,
@@ -3073,6 +3107,9 @@ class AddOrderController extends BaseController {
 
         if (serverBillNumber != null && serverBillNumber.isNotEmpty) {
           syncLocalOutletBillNumber(appPref, serverBillNumber);
+          unawaited(
+            BillNumberAllocator.instance.reconcileFromIssued(serverBillNumber),
+          );
         }
 
         final savedOrderId = savedId;
@@ -3083,15 +3120,18 @@ class AddOrderController extends BaseController {
         }
 
         if (sendToKitchen) {
+          // Print / sync must not delay invoice or leave navigation.
           if (shouldPrintKot) {
-            await _maybeAutoPrintKOT(
-              request,
-              orderId: savedOrderId,
-              kotItemsOverride: kotDeltaForPrint,
+            unawaited(
+              _maybeAutoPrintKOT(
+                request,
+                orderId: savedOrderId,
+                kotItemsOverride: kotDeltaForPrint,
+              ),
             );
           }
           await _commitKotPrintedBaseline(orderId: savedOrderId);
-          await _syncKitchenQuantitiesToServer(savedOrderId, request);
+          unawaited(_syncKitchenQuantitiesToServer(savedOrderId, request));
         }
 
         final billNumberForTable = response['data']?['billNumber']?.toString();
@@ -3124,7 +3164,7 @@ class AddOrderController extends BaseController {
           tableNumber: request.tableNumber,
           currentBillNumber: billNumberForTable,
           openInvoice: () async {
-            await _maybeOpenCashDrawerOnBill(request);
+            unawaited(_maybeOpenCashDrawerOnBill(request));
             await Modular.to.pushNamed(
               HomeMainRoutes.invoiceScreen,
               arguments: {
@@ -3138,6 +3178,10 @@ class AddOrderController extends BaseController {
           },
         );
       } else if (response == null) {
+        if (!OfflineMode.isEnabled) {
+          showError(description: loc.offline_mode_disabled);
+          return;
+        }
         await _completeOfflineOrderSave(
           request: request,
           localStatusForUi: localStatusForUi,
@@ -3151,7 +3195,17 @@ class AddOrderController extends BaseController {
           chargePlatformFee: chargePlatformFee,
         );
       } else {
-        showError(description: loc.order_failed);
+        final body = response is Map ? response : null;
+        final message = body?['message']?.toString() ?? '';
+        if (message.toLowerCase().contains('bill number')) {
+          showError(
+            description: loc.bill_number_duplicate(
+              request.billNumber?.toString() ?? '',
+            ),
+          );
+        } else {
+          showError(description: loc.order_failed);
+        }
       }
     } else {
       await _completeOfflineOrderSave(
@@ -3166,6 +3220,163 @@ class AddOrderController extends BaseController {
         kotDeltaForPrint: kotDeltaForPrint,
         chargePlatformFee: chargePlatformFee,
       );
+    }
+  }
+
+  /// Saves order through the Windows LAN host (Petpooja-style staff till).
+  /// Returns `true` when the host accepted the order; `false` to fall back.
+  Future<bool> _completeHostLanOrderSave({
+    required CreateorderRequest request,
+    required String localStatusForUi,
+    required String normalizedStatus,
+    required bool isHoldOnly,
+    required bool isBilling,
+    required bool stayOnScreen,
+    required bool sendToKitchen,
+    required bool shouldPrintKot,
+    required List<OrderItem> kotDeltaForPrint,
+    required bool chargePlatformFee,
+    required String? existingOrderId,
+  }) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    final baseUrl = appPref.localStoreClientBaseUrl.trim();
+    final token = appPref.localStoreClientToken.trim();
+    if (baseUrl.isEmpty || token.isEmpty) {
+      appPref.clearLocalStoreClient();
+      return false;
+    }
+
+    try {
+      var savedRequest = request;
+      final orderId = (existingOrderId != null && existingOrderId.isNotEmpty)
+          ? existingOrderId
+          : 'lan_${DateTime.now().millisecondsSinceEpoch}';
+
+      if (savedRequest.billNumber == null ||
+          savedRequest.billNumber!.trim().isEmpty) {
+        savedRequest = copyRequestWithBillNumber(
+          savedRequest,
+          await _reserveUniqueBillNumber(excludeOrderId: orderId),
+        );
+      }
+
+      final orderModel = _mapToOrderModel(
+        savedRequest,
+        orderId,
+        statusOverride: localStatusForUi,
+        createdAtOverride: orders?.createdAt,
+      );
+
+      final body = orderModel.toJson();
+      body['localStatus'] = localStatusForUi;
+
+      final client = LocalStoreClient();
+      Map<String, dynamic>? saved;
+      try {
+        saved = await client.upsertOrder(
+          baseUrl: baseUrl,
+          token: token,
+          body: body,
+          orderId: existingOrderId,
+        );
+      } finally {
+        client.close();
+      }
+
+      if (saved == null) {
+        debugPrint('Store host upsert failed — falling back to local/cloud save');
+        return false;
+      }
+
+      final hostModel = api.OrderModel.fromJson(saved);
+      await db.insertOrders(
+        [hostModel],
+        appPref.selectedOutlet!.id!,
+        isSyncedFromApi: true,
+        protectUnsynced: false,
+      );
+
+      if (hostModel.billNumber.trim().isNotEmpty) {
+        syncLocalOutletBillNumber(appPref, hostModel.billNumber);
+        unawaited(
+          BillNumberAllocator.instance.reconcileFromIssued(hostModel.billNumber),
+        );
+      }
+
+      if (chargePlatformFee) {
+        final label = hostModel.billNumber.isNotEmpty
+            ? 'Bill #${hostModel.billNumber}'
+            : 'Order';
+        PlatformFeeService.debitLocal(
+          appPref,
+          description:
+              'Platform fee ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} — $label',
+        );
+        PlatformFeeService.markPendingFeeForOrder(appPref, hostModel.id);
+      }
+
+      final invoiceRequest = copyRequestWithBillNumber(
+        savedRequest,
+        hostModel.billNumber,
+      );
+
+      if (sendToKitchen || shouldPrintKot) {
+        if (shouldPrintKot) {
+          unawaited(
+            _maybeAutoPrintKOT(
+              invoiceRequest,
+              orderId: hostModel.id,
+              kotItemsOverride: kotDeltaForPrint,
+            ),
+          );
+        }
+        await _commitKotPrintedBaseline(orderId: hostModel.id);
+      }
+
+      if (stayOnScreen) {
+        orderDetails['id'] = hostModel.id;
+        orderDetails['billNumber'] = hostModel.billNumber;
+        await _enterEditModeAfterSave(
+          responseData: {
+            'id': hostModel.id,
+            'billNumber': hostModel.billNumber,
+          },
+          request: invoiceRequest,
+        );
+        await _runPostSaveUiRefresh(
+          orderStatus: normalizedStatus,
+          tableNumber: invoiceRequest.tableNumber,
+          currentBillNumber: hostModel.billNumber,
+        );
+        showSuccess(description: 'KOT sent — continue adding items');
+        return true;
+      }
+
+      showSuccess(description: loc.order_saved);
+      await _finishSaveLeaveOrReset(
+        isHoldOnly: isHoldOnly,
+        isBilling: isBilling,
+        orderStatus: normalizedStatus,
+        tableNumber: invoiceRequest.tableNumber,
+        currentBillNumber: hostModel.billNumber,
+          openInvoice: () async {
+          unawaited(_maybeOpenCashDrawerOnBill(invoiceRequest));
+          await Modular.to.pushNamed(
+            HomeMainRoutes.invoiceScreen,
+            arguments: {
+              'invoice': invoiceRequest,
+              'orderFrom':
+                  invoiceRequest.orderFrom ?? selectedOrderSource.value,
+              'isEdit': isEdit.value,
+              'isOffline': false,
+            },
+          );
+        },
+      );
+      return true;
+    } catch (e, st) {
+      debugPrint('Host LAN order save failed: $e\n$st');
+      return false;
     }
   }
 
@@ -3184,19 +3395,38 @@ class AddOrderController extends BaseController {
     final loc = AppLocalizations.of(Get.context!)!;
     try {
       var savedRequest = request;
-      if (savedRequest.billNumber == null ||
-          savedRequest.billNumber!.trim().isEmpty) {
-        savedRequest = copyRequestWithBillNumber(
-          savedRequest,
-          await _offlineBillPreview(),
-        );
-      }
-
       final existingId = _existingOrderId();
       final orderId =
           (existingId != null && existingId.isNotEmpty)
           ? existingId
           : 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+      if (savedRequest.billNumber == null ||
+          savedRequest.billNumber!.trim().isEmpty) {
+        savedRequest = copyRequestWithBillNumber(
+          savedRequest,
+          await _reserveUniqueBillNumber(excludeOrderId: orderId),
+        );
+      } else {
+        final outletId = appPref.selectedOutlet?.id;
+        if (outletId != null) {
+          final duplicate = await BillNumberAllocator.instance.isDuplicate(
+            outletId: outletId,
+            billNumber: savedRequest.billNumber!,
+            excludeOrderId: orderId,
+          );
+          if (duplicate) {
+            showError(
+              description: loc.bill_number_duplicate(savedRequest.billNumber!),
+            );
+            // Re-reserve a free number instead of failing the whole save.
+            savedRequest = copyRequestWithBillNumber(
+              savedRequest,
+              await _reserveUniqueBillNumber(excludeOrderId: orderId),
+            );
+          }
+        }
+      }
 
       final orderModel = _mapToOrderModel(
         savedRequest,
@@ -3210,6 +3440,12 @@ class AddOrderController extends BaseController {
         appPref.selectedOutlet!.id!,
         isSyncedFromApi: false,
       );
+
+      final issued = savedRequest.billNumber;
+      if (issued != null && issued.trim().isNotEmpty) {
+        syncLocalOutletBillNumber(appPref, issued);
+        unawaited(BillNumberAllocator.instance.reconcileFromIssued(issued));
+      }
 
       if (chargePlatformFee) {
         final label =
@@ -3231,10 +3467,12 @@ class AddOrderController extends BaseController {
 
       if (sendToKitchen || shouldPrintKot) {
         if (shouldPrintKot) {
-          await _maybeAutoPrintKOT(
-            savedRequest,
-            orderId: orderId,
-            kotItemsOverride: kotDeltaForPrint,
+          unawaited(
+            _maybeAutoPrintKOT(
+              savedRequest,
+              orderId: orderId,
+              kotItemsOverride: kotDeltaForPrint,
+            ),
           );
         }
         await _commitKotPrintedBaseline(orderId: orderId);
@@ -3267,7 +3505,7 @@ class AddOrderController extends BaseController {
         tableNumber: savedRequest.tableNumber,
         currentBillNumber: savedRequest.billNumber,
         openInvoice: () async {
-          await _maybeOpenCashDrawerOnBill(savedRequest);
+          unawaited(_maybeOpenCashDrawerOnBill(savedRequest));
           await Modular.to.pushNamed(
             HomeMainRoutes.invoiceScreen,
             arguments: {
@@ -3310,18 +3548,24 @@ class AddOrderController extends BaseController {
       }
     }
 
-    return _offlineBillPreview();
+    return BillNumberAllocator.instance.peekNext(outletId: outletId);
+  }
+
+  /// Reserves a unique bill for offline / LAN use and bumps the local counter.
+  Future<String> _reserveUniqueBillNumber({String? excludeOrderId}) async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return '1';
+
+    return BillNumberAllocator.instance.reserveNext(
+      outletId: outletId,
+      excludeOrderId: excludeOrderId ?? _existingOrderId(),
+    );
   }
 
   Future<String> _offlineBillPreview() async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return '1';
-
-    final localOrders = await db.getAllOrders(outletId: outletId);
-    return computeNextBillNumber(
-      outletLastBillNumber: appPref.selectedOutlet?.billNumber ?? 0,
-      orderBillNumbers: localOrders.map((order) => order.billNumber),
-    ).toString();
+    return BillNumberAllocator.instance.peekNext(outletId: outletId);
   }
 
   Future<bool> _isBillNumberUnique(
@@ -3332,13 +3576,12 @@ class AddOrderController extends BaseController {
       final outletId = appPref.selectedOutlet?.id;
       if (outletId == null) return true;
 
-      final localOrders = await db.getAllOrders(outletId: outletId);
-      final existsInLocal = localOrders.any((order) {
-        if (excludeOrderId != null && order.id == excludeOrderId) return false;
-        return order.billNumber.toLowerCase() == billNumber.toLowerCase();
-      });
-
-      if (existsInLocal) {
+      final duplicate = await BillNumberAllocator.instance.isDuplicate(
+        outletId: outletId,
+        billNumber: billNumber,
+        excludeOrderId: excludeOrderId,
+      );
+      if (duplicate) {
         debugPrint('⚠️ Bill number $billNumber exists in local database');
         return false;
       }
@@ -3361,9 +3604,11 @@ class AddOrderController extends BaseController {
           );
           if (response?.status == 'success') {
             final existsInApi = response!.data.any((order) {
-              if (excludeOrderId != null && order.id == excludeOrderId)
+              if (excludeOrderId != null && order.id == excludeOrderId) {
                 return false;
-              return order.billNumber.toLowerCase() == billNumber.toLowerCase();
+              }
+              return order.billNumber.toLowerCase() ==
+                  billNumber.toLowerCase();
             });
             if (existsInApi) {
               debugPrint('⚠️ Bill number $billNumber exists in API');
@@ -3578,11 +3823,13 @@ class AddOrderController extends BaseController {
 
     if (!canStartNew) {
       if (isHoldOnly || !isBilling) {
-        await _runPostSaveUiRefresh(
-          orderStatus: orderStatus,
-          tableNumber: tableNumber,
-          currentBillNumber: currentBillNumber,
-          refreshTables: false,
+        unawaited(
+          _runPostSaveUiRefresh(
+            orderStatus: orderStatus,
+            tableNumber: tableNumber,
+            currentBillNumber: currentBillNumber,
+            refreshTables: false,
+          ),
         );
         await _returnAfterOrderSave();
         return;
@@ -3602,11 +3849,13 @@ class AddOrderController extends BaseController {
     clearOrderDraft();
 
     if (isHoldOnly || !isBilling) {
-      await _runPostSaveUiRefresh(
-        orderStatus: orderStatus,
-        tableNumber: tableNumber,
-        currentBillNumber: currentBillNumber,
-        refreshTables: false,
+      unawaited(
+        _runPostSaveUiRefresh(
+          orderStatus: orderStatus,
+          tableNumber: tableNumber,
+          currentBillNumber: currentBillNumber,
+          refreshTables: false,
+        ),
       );
       await _returnAfterOrderSave();
       return;
@@ -3623,7 +3872,8 @@ class AddOrderController extends BaseController {
   }
 
   Future<void> _returnAfterOrderSave() async {
-    await _refreshTablesAfterOrderSave();
+    // Navigate first; table refresh happens in the background.
+    unawaited(_refreshTablesAfterOrderSave());
     if (isFromTableScreen.value) {
       Modular.to.navigate(HomeMainRoutes.tables);
       return;

@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/switch_with_on_off_label.dart';
 import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
@@ -69,9 +70,9 @@ class ProductVariantsSection extends StatelessWidget {
                   ),
                 ),
               ),
-              Switch(
+              SwitchWithOnOffLabel(
                 value: enabled,
-                activeThumbColor: AppColor.primary,
+                activeColor: AppColor.primary,
                 onChanged: onEnabledChanged,
               ),
             ],

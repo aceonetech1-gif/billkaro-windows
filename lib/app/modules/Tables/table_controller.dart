@@ -11,6 +11,7 @@ import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/tables/table_reservation_model.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
+import 'package:billkaro/app/services/local_store/local_store_orders_cache.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/utils/staff_access.dart';
@@ -224,6 +225,9 @@ class TableController extends BaseController {
 
   Future<List<OrderModel>> _localOrders(String outletId) async {
     try {
+      if (appPref.localStoreClientJoined) {
+        await LocalStoreOrdersCache.pullFromHost();
+      }
       return await db.getAllOrders(outletId: outletId);
     } catch (e) {
       debugPrint('loadTables orders error: $e');

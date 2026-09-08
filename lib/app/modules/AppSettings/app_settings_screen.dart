@@ -2,32 +2,180 @@ import 'package:billkaro/app/modules/AppSettings/app_settings_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Language/language_dialog.dart';
-import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_dialogs.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/Widgets/billing_mode_selector.dart';
+import 'package:billkaro/app/Widgets/switch_with_on_off_label.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/kitchen_display_browser.dart';
-import 'package:billkaro/utils/po_print_orientation.dart';
 import 'package:billkaro/utils/staff_access.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
-class AppSettingsScreen extends StatelessWidget {
-  AppSettingsScreen({super.key});
+
+enum _SettingsCategory {
+  ordersBilling,
+  hardware,
+  syncDevices,
+  billingPlan,
+  notifications,
+  appearance,
+  help,
+}
+
+class _SettingsCategoryInfo {
+  const _SettingsCategoryInfo({
+    required this.id,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final _SettingsCategory id;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+}
+
+class AppSettingsScreen extends StatefulWidget {
+  const AppSettingsScreen({super.key});
+
+  @override
+  State<AppSettingsScreen> createState() => _AppSettingsScreenState();
+}
+
+class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late final controller = Get.put(AppSettingsController());
   final ThemeController themeController = Get.find<ThemeController>();
+  final TextEditingController _searchController = TextEditingController();
+
+  _SettingsCategory? _selected;
+  String _query = '';
+
+  static const double _wideBreakpoint = 900;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<_SettingsCategoryInfo> _allCategories(AppLocalizations loc) {
+    final items = <_SettingsCategoryInfo>[
+      _SettingsCategoryInfo(
+        id: _SettingsCategory.ordersBilling,
+        icon: Icons.receipt_long_outlined,
+        title: loc.settings_section_orders_billing,
+        subtitle: loc.settings_section_orders_billing_desc,
+      ),
+      _SettingsCategoryInfo(
+        id: _SettingsCategory.hardware,
+        icon: Icons.print_outlined,
+        title: loc.settings_section_hardware,
+        subtitle: loc.settings_section_hardware_desc,
+      ),
+      _SettingsCategoryInfo(
+        id: _SettingsCategory.syncDevices,
+        icon: Icons.devices_outlined,
+        title: loc.settings_section_sync_devices,
+        subtitle: loc.settings_section_sync_devices_desc,
+      ),
+    ];
+    if (StaffAccess.isOwnerSession) {
+      items.add(
+        _SettingsCategoryInfo(
+          id: _SettingsCategory.billingPlan,
+          icon: Icons.account_balance_wallet_outlined,
+          title: loc.settings_section_billing,
+          subtitle: loc.settings_section_billing_desc,
+        ),
+      );
+    }
+    items.addAll([
+      _SettingsCategoryInfo(
+        id: _SettingsCategory.notifications,
+        icon: Icons.notifications_outlined,
+        title: loc.settings_section_notifications,
+        subtitle: loc.settings_section_notifications_desc,
+      ),
+      _SettingsCategoryInfo(
+        id: _SettingsCategory.appearance,
+        icon: Icons.palette_outlined,
+        title: loc.settings_section_appearance_language,
+        subtitle: loc.settings_section_appearance_language_desc,
+      ),
+      _SettingsCategoryInfo(
+        id: _SettingsCategory.help,
+        icon: Icons.support_outlined,
+        title: loc.help_and_setup,
+        subtitle: loc.settings_section_help_desc,
+      ),
+    ]);
+    return items;
+  }
+
+  List<_SettingsCategoryInfo> _filteredCategories(AppLocalizations loc) {
+    final q = _query.trim().toLowerCase();
+    final all = _allCategories(loc);
+    if (q.isEmpty) return all;
+    return all
+        .where(
+          (c) =>
+              c.title.toLowerCase().contains(q) ||
+              c.subtitle.toLowerCase().contains(q),
+        )
+        .toList();
+  }
+
+  void _selectCategory(_SettingsCategory id) {
+    setState(() => _selected = id);
+  }
+
+  void _clearCategory() {
+    setState(() => _selected = null);
+  }
+
+  String _appBarTitle(
+    AppLocalizations loc, {
+    required bool isWide,
+    required _SettingsCategory? selected,
+  }) {
+    if (isWide || selected == null) return loc.settings;
+    for (final c in _allCategories(loc)) {
+      if (c.id == selected) return c.title;
+    }
+    return loc.settings;
+  }
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final isWide = MediaQuery.sizeOf(context).width >= _wideBreakpoint;
+    final categories = _filteredCategories(loc);
+    var selected = _selected;
+    if (isWide) {
+      selected ??= categories.isNotEmpty ? categories.first.id : null;
+      if (selected != null &&
+          categories.isNotEmpty &&
+          !categories.any((c) => c.id == selected)) {
+        selected = categories.first.id;
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         elevation: 0,
         shadowColor: Colors.transparent,
+        leading: (!isWide && selected != null)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _clearCategory,
+                tooltip: loc.settings_back_to_categories,
+              )
+            : null,
         title: Text(
-          loc.settings,
+          _appBarTitle(loc, isWide: isWide, selected: selected),
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         bottom: PreferredSize(
@@ -36,315 +184,600 @@ class AppSettingsScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSection(
-                loc.settings_section_general,
-                _withDividers([
-                  // _buildSwitchTile(
-                  //   icon: Icons.view_list_rounded,
-                  //   title: loc.billing_list_view,
-                  //   subtitle: loc.billing_list_view_subtitle,
-                  //   value: controller.isListView,
-                  //   onChanged: controller.setListView,
-                  // ),
-                  // _buildActionOrNavTile(
-                  //   icon: Icons.description_outlined,
-                  //   title: loc.settings_po_terms,
-                  //   subtitle: loc.settings_po_terms_subtitle,
-                  //   onTap: showPoDefaultTermsSettingsDialog,
-                  //   showChevron: true,
-                  // ),
-                  // _buildPoPrintOrientationTile(loc),
-                  _buildSwitchTile(
-                    icon: Icons.qr_code_2_outlined,
-                    title: loc.show_qr_on_bill,
-                    subtitle: loc.show_qr_on_bill_subtitle,
-                    value: controller.showQrOnBill,
-                    onChanged: controller.setShowQrOnBill,
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.edit_note_outlined,
-                    title: loc.add_details_on_create_order,
-                    subtitle: loc.add_details_on_create_order_subtitle,
-                    value: controller.showAddDetailsOnCreateOrder,
-                    onChanged: controller.setShowAddDetailsOnCreateOrder,
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.sync_rounded,
-                    title: loc.sync_devices,
-                    subtitle: loc.sync_across_multiple_devices,
-                    value: controller.autoSyncEnabled,
-                    onChanged: controller.setAutoSyncEnabled,
-                  ),
-                  _buildActionOrNavTile(
-                    icon: Icons.local_offer_outlined,
-                    title: 'Offers & Promotions',
-                    subtitle: 'BOGO, discounts, free items & time offers',
-                    onTap: () => Modular.to.pushNamed(HomeMainRoutes.promotions),
-                    showChevron: true,
-                  ),
-
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildSwitchTile(
-                        icon: Icons.point_of_sale_outlined,
-                        title: loc.cash_drawer,
-                        subtitle: loc.cash_drawer_subtitle,
-                        value: controller.cashDrawerEnabled,
-                        onChanged: controller.setCashDrawerEnabled,
-                      ),
-                      Obx(() {
-                        if (!controller.cashDrawerEnabled.value) {
-                          return const SizedBox.shrink();
-                        }
-                        final openOnCash =
-                            controller.openCashDrawerOnCashPayment.value;
-                        final selected = cashDrawerPinFromStorage(
-                          controller.cashDrawerPin.value,
-                        );
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildDivider(),
-                            _buildTile(
-                              icon: Icons.payments_outlined,
-                              title: loc.open_cash_drawer_on_cash_payment,
-                              subtitle: loc
-                                  .open_cash_drawer_on_cash_payment_subtitle,
-                              trailing: Switch(
-                                value: openOnCash,
-                                onChanged:
-                                    controller.setOpenCashDrawerOnCashPayment,
-                                activeColor: AppColor.primary,
-                              ),
-                            ),
-                            _buildDivider(),
-                            _buildTile(
-                              icon: Icons.settings_input_component_outlined,
-                              title: loc.cash_drawer_kick_pin,
-                              subtitle: loc.cash_drawer_kick_pin_subtitle,
-                              trailing: SegmentedButton<CashDrawerPin>(
-                                segments: [
-                                  ButtonSegment(
-                                    value: CashDrawerPin.pin2,
-                                    label: Text(loc.cash_drawer_pin_2),
-                                  ),
-                                  ButtonSegment(
-                                    value: CashDrawerPin.pin5,
-                                    label: Text(loc.cash_drawer_pin_5),
-                                  ),
-                                ],
-                                selected: {selected},
-                                onSelectionChanged: (set) {
-                                  controller.setCashDrawerPin(set.first);
-                                },
-                                style: const ButtonStyle(
-                                  visualDensity: VisualDensity.compact,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
-                    ],
-                  ),
-                  if (Get.isRegistered<HomeScreenController>())
-                    Obx(() {
-                      Get.find<HomeScreenController>().selectedOutlet.value;
-                      if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
-                        return const SizedBox.shrink();
-                      }
-                      final kotOn = controller.kotModeEnabled.value;
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildTile(
-                            icon: Icons.restaurant_menu_outlined,
-                            title: loc.kot_mode,
-                            subtitle:
-                                loc.printKOT_desc.replaceAll('\n', ' '),
-                            trailing: Switch(
-                              value: kotOn,
-                              onChanged: controller.setKotMode,
-                              activeColor: AppColor.primary,
-                            ),
-                          ),
-                          if (kotOn) ...[
-                            _buildDivider(),
-                            _buildActionOrNavTile(
-                              icon: Icons.open_in_browser_rounded,
-                              title: loc.kitchen_display_in_browser,
-                              subtitle:
-                                  loc.kitchen_display_browser_subtitle,
-                              onTap: KitchenDisplayBrowser.open,
-                            ),
-                          ],
-                        ],
-                      );
-                    })
-                  else if (HomeMainRoutes.outletIsCafeOrRestaurant())
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildSwitchTile(
-                          icon: Icons.restaurant_menu_outlined,
-                          title: loc.kot_mode,
-                          subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
-                          value: controller.kotModeEnabled,
-                          onChanged: controller.setKotMode,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  hintText: loc.settings_search_hint,
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
                         ),
-                        Obx(() {
-                          if (!controller.kotModeEnabled.value) {
-                            return const SizedBox.shrink();
-                          }
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildDivider(),
-                              _buildActionOrNavTile(
-                                icon: Icons.open_in_browser_rounded,
-                                title: loc.kitchen_display_in_browser,
-                                subtitle:
-                                    loc.kitchen_display_browser_subtitle,
-                                onTap: KitchenDisplayBrowser.open,
-                              ),
-                            ],
-                          );
-                        }),
-                      ],
-                    ),
-
-                  Obx(
-                    () => _buildActionOrNavTile(
-                      icon: Icons.folder_open_outlined,
-                      title: loc.download_path,
-                      subtitle: controller.downloadPath.value.isEmpty
-                          ? loc.default_downloads_folder
-                          : controller.downloadPath.value,
-                      onTap: controller.pickDownloadPath,
-                      showChevron: true,
-                    ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
                   ),
-                ]),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColor.primary, width: 1.4),
+                  ),
+                ),
               ),
-              const Gap(24),
-              if (StaffAccess.isOwnerSession) ...[
-                _buildSection(loc.settings_section_billing, [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(loc.billing_mode_title, style: _titleStyle),
-                        const Gap(4),
-                        Text(loc.billing_mode_subtitle, style: _subtitleStyle),
-                      ],
-                    ),
-                  ),
-                  Obx(
-                    () => BillingModeSelector(
-                      selected: controller.billingAccessMode.value,
-                      enabled: controller.canChangeBillingMode,
-                      onSelected: controller.requestBillingModeChange,
-                      subscriptionTitle: loc.billing_mode_subscription,
-                      subscriptionSubtitle: loc.billing_mode_subscription_desc,
-                      walletTitle: loc.billing_mode_wallet,
-                      walletSubtitle: loc.billing_mode_wallet_desc,
-                    ),
-                  ),
-                ]),
-                const Gap(24),
-              ],
-              _buildSection(loc.settings_section_notifications, [
-                _buildSwitchTile(
-                  icon: Icons.notifications_outlined,
-                  title: loc.settings_section_notifications,
-                  subtitle: loc.settings_notifications_subtitle,
-                  value: controller.notificationsEnabled,
-                  onChanged: controller.setNotificationsEnabled,
-                ),
-                _buildTile(
-                  icon: Icons.inbox_outlined,
-                  title: loc.notification_history,
-                  subtitle: loc.notification_history_subtitle,
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey[400],
-                    size: 20,
-                  ),
-                  onTap: () =>
-                      Modular.to.pushNamed(HomeMainRoutes.notifications),
-                ),
-              ]),
-              const Gap(24),
-              _buildSection(loc.settings_section_appearance, [
-                Obx(
-                  () => _buildTile(
-                    icon: Icons.palette_outlined,
-                    title: loc.theme_color,
-                    subtitle: themeController.selectedThemeColorName,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: themeController.themeColor.value,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Colors.grey[400],
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                    onTap: () => _showThemeColorPicker(context, loc),
-                  ),
-                ),
-              ]),
-              const Gap(24),
-              _buildSection(loc.settings_section_language_region, [
-                _buildActionOrNavTile(
-                  icon: Icons.language,
-                  title: loc.language,
-                  subtitle: loc.change_app_language,
-                  onTap: () => showLanguagePickerDialog(context),
-                  showChevron: true,
-                ),
-              ]),
-              const Gap(24),
-              _buildSection(loc.help_and_setup, [
-                _buildActionOrNavTile(
-                  icon: Icons.support_outlined,
-                  title: loc.help_and_setup,
-                  subtitle: loc.help_subtitle,
-                  onTap: () => Modular.to.pushNamed(HomeMainRoutes.helpSetup),
-                  showChevron: true,
-                ),
-              ]),
-              const Gap(40),
-            ],
-          ),
+            ),
+            Expanded(
+              child: categories.isEmpty
+                  ? Center(
+                      child: Text(
+                        loc.settings_no_results,
+                        style: _subtitleStyle,
+                      ),
+                    )
+                  : isWide
+                      ? _buildWideBody(loc, categories, selected!)
+                      : (selected == null
+                          ? _buildCategoryHub(loc, categories)
+                          : _buildCategoryDetailScroll(loc, selected)),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _buildWideBody(
+    AppLocalizations loc,
+    List<_SettingsCategoryInfo> categories,
+    _SettingsCategory selected,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 280,
+          child: _buildCategoryList(categories, selected),
+        ),
+        VerticalDivider(width: 1, thickness: 1, color: Colors.grey.shade200),
+        Expanded(child: _buildCategoryDetailScroll(loc, selected)),
+      ],
+    );
+  }
+
+  Widget _buildCategoryHub(
+    AppLocalizations loc,
+    List<_SettingsCategoryInfo> categories,
+  ) {
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      children: [
+        _buildSectionCard(
+          children: [
+            for (var i = 0; i < categories.length; i++) ...[
+              if (i > 0) _buildDivider(),
+              _buildCategoryHubTile(categories[i]),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryList(
+    List<_SettingsCategoryInfo> categories,
+    _SettingsCategory selected,
+  ) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final cat = categories[index];
+        final isSelected = cat.id == selected;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Material(
+            color: isSelected
+                ? AppColor.primary.withOpacity(0.10)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () => _selectCategory(cat.id),
+              borderRadius: BorderRadius.circular(12),
+              hoverColor: _tileHover,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColor.primary.withOpacity(0.14)
+                            : AppColor.primary.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        cat.icon,
+                        size: 20,
+                        color: AppColor.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cat.title,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight:
+                                  isSelected ? FontWeight.w700 : FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            cat.subtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: _subtitleStyle,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryHubTile(_SettingsCategoryInfo cat) {
+    return _buildTile(
+      icon: cat.icon,
+      title: cat.title,
+      subtitle: cat.subtitle,
+      onTap: () => _selectCategory(cat.id),
+      trailing: Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+    );
+  }
+
+  Widget _buildCategoryDetailScroll(
+    AppLocalizations loc,
+    _SettingsCategory selected,
+  ) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+      child: _buildCategoryContent(loc, selected),
+    );
+  }
+
+  Widget _buildCategoryContent(
+    AppLocalizations loc,
+    _SettingsCategory selected,
+  ) {
+    switch (selected) {
+      case _SettingsCategory.ordersBilling:
+        return _buildOrdersBillingContent(loc);
+      case _SettingsCategory.hardware:
+        return _buildHardwareContent(loc);
+      case _SettingsCategory.syncDevices:
+        return _buildSyncDevicesContent(loc);
+      case _SettingsCategory.billingPlan:
+        return _buildBillingPlanContent(loc);
+      case _SettingsCategory.notifications:
+        return _buildNotificationsContent(loc);
+      case _SettingsCategory.appearance:
+        return _buildAppearanceContent(loc);
+      case _SettingsCategory.help:
+        return _buildHelpContent(loc);
+    }
+  }
+
+  Widget _buildOrdersBillingContent(AppLocalizations loc) {
+    return _buildSection(
+      loc.settings_section_orders_billing,
+      _withDividers([
+        _buildSwitchTile(
+          icon: Icons.qr_code_2_outlined,
+          title: loc.show_qr_on_bill,
+          subtitle: loc.show_qr_on_bill_subtitle,
+          value: controller.showQrOnBill,
+          onChanged: controller.setShowQrOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.edit_note_outlined,
+          title: loc.add_details_on_create_order,
+          subtitle: loc.add_details_on_create_order_subtitle,
+          value: controller.showAddDetailsOnCreateOrder,
+          onChanged: controller.setShowAddDetailsOnCreateOrder,
+        ),
+        _buildActionOrNavTile(
+          icon: Icons.local_offer_outlined,
+          title: loc.settings_offers_promotions,
+          subtitle: loc.settings_offers_promotions_subtitle,
+          onTap: () => Modular.to.pushNamed(HomeMainRoutes.promotions),
+          showChevron: true,
+        ),
+        Obx(
+          () => _buildActionOrNavTile(
+            icon: Icons.folder_open_outlined,
+            title: loc.download_path,
+            subtitle: controller.downloadPath.value.isEmpty
+                ? loc.default_downloads_folder
+                : controller.downloadPath.value,
+            onTap: controller.pickDownloadPath,
+            showChevron: true,
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildHardwareContent(AppLocalizations loc) {
+    return _buildSection(
+      loc.settings_section_hardware,
+      _withDividers([
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSwitchTile(
+              icon: Icons.point_of_sale_outlined,
+              title: loc.cash_drawer,
+              subtitle: loc.cash_drawer_subtitle,
+              value: controller.cashDrawerEnabled,
+              onChanged: controller.setCashDrawerEnabled,
+            ),
+            Obx(() {
+              if (!controller.cashDrawerEnabled.value) {
+                return const SizedBox.shrink();
+              }
+              final openOnCash =
+                  controller.openCashDrawerOnCashPayment.value;
+              final selected = cashDrawerPinFromStorage(
+                controller.cashDrawerPin.value,
+              );
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDivider(),
+                  _buildTile(
+                    icon: Icons.payments_outlined,
+                    title: loc.open_cash_drawer_on_cash_payment,
+                    subtitle:
+                        loc.open_cash_drawer_on_cash_payment_subtitle,
+                    trailing: SwitchWithOnOffLabel(
+                      value: openOnCash,
+                      onChanged: controller.setOpenCashDrawerOnCashPayment,
+                      activeColor: AppColor.primary,
+                    ),
+                  ),
+                  _buildDivider(),
+                  _buildTile(
+                    icon: Icons.settings_input_component_outlined,
+                    title: loc.cash_drawer_kick_pin,
+                    subtitle: loc.cash_drawer_kick_pin_subtitle,
+                    trailing: SegmentedButton<CashDrawerPin>(
+                      segments: [
+                        ButtonSegment(
+                          value: CashDrawerPin.pin2,
+                          label: Text(loc.cash_drawer_pin_2),
+                        ),
+                        ButtonSegment(
+                          value: CashDrawerPin.pin5,
+                          label: Text(loc.cash_drawer_pin_5),
+                        ),
+                      ],
+                      selected: {selected},
+                      onSelectionChanged: (set) {
+                        controller.setCashDrawerPin(set.first);
+                      },
+                      style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+        if (Get.isRegistered<HomeScreenController>())
+          Obx(() {
+            Get.find<HomeScreenController>().selectedOutlet.value;
+            if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
+              return const SizedBox.shrink();
+            }
+            final kotOn = controller.kotModeEnabled.value;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTile(
+                  icon: Icons.restaurant_menu_outlined,
+                  title: loc.kot_mode,
+                  subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
+                  trailing: SwitchWithOnOffLabel(
+                    value: kotOn,
+                    onChanged: controller.setKotMode,
+                    activeColor: AppColor.primary,
+                  ),
+                ),
+                if (kotOn) ...[
+                  _buildDivider(),
+                  _buildActionOrNavTile(
+                    icon: Icons.open_in_browser_rounded,
+                    title: loc.kitchen_display_in_browser,
+                    subtitle: loc.kitchen_display_browser_subtitle,
+                    onTap: KitchenDisplayBrowser.open,
+                  ),
+                ],
+              ],
+            );
+          })
+        else if (HomeMainRoutes.outletIsCafeOrRestaurant())
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSwitchTile(
+                icon: Icons.restaurant_menu_outlined,
+                title: loc.kot_mode,
+                subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
+                value: controller.kotModeEnabled,
+                onChanged: controller.setKotMode,
+              ),
+              Obx(() {
+                if (!controller.kotModeEnabled.value) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildDivider(),
+                    _buildActionOrNavTile(
+                      icon: Icons.open_in_browser_rounded,
+                      title: loc.kitchen_display_in_browser,
+                      subtitle: loc.kitchen_display_browser_subtitle,
+                      onTap: KitchenDisplayBrowser.open,
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+      ]),
+    );
+  }
+
+  Widget _buildSyncDevicesContent(AppLocalizations loc) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSection(
+          loc.settings_section_sync_devices,
+          _withDividers([
+            _buildSwitchTile(
+              icon: Icons.sync_rounded,
+              title: loc.sync_devices,
+              subtitle: loc.sync_across_multiple_devices,
+              value: controller.autoSyncEnabled,
+              onChanged: controller.setAutoSyncEnabled,
+            ),
+            _buildSwitchTile(
+              icon: Icons.cloud_off_outlined,
+              title: loc.offline_mode,
+              subtitle: loc.offline_mode_subtitle,
+              value: controller.offlineModeEnabled,
+              onChanged: controller.setOfflineModeEnabled,
+            ),
+          ]),
+        ),
+        const Gap(24),
+        _buildSection(loc.settings_section_local_store, [
+          _buildSwitchTile(
+            icon: Icons.wifi_tethering,
+            title: loc.local_store_host_mode,
+            subtitle: loc.local_store_host_mode_subtitle,
+            value: controller.localStoreHostEnabled,
+            onChanged: controller.setLocalStoreHostEnabled,
+          ),
+          Obx(() {
+            if (!controller.localStoreHostEnabled.value) {
+              return const SizedBox.shrink();
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDivider(),
+                _buildActionOrNavTile(
+                  icon: Icons.qr_code_2_rounded,
+                  title: loc.local_store_show_qr,
+                  subtitle: loc.local_store_show_qr_subtitle,
+                  onTap: () => Modular.to.pushNamed(
+                    HomeMainRoutes.localStoreHost,
+                  ),
+                  showChevron: true,
+                ),
+              ],
+            );
+          }),
+          Obx(() {
+            final joined = controller.localStoreClientJoined.value;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDivider(),
+                if (joined) ...[
+                  _buildTile(
+                    icon: Icons.devices_other_outlined,
+                    title: loc.local_store_joined_status(
+                      controller.localStoreClientLabel.value,
+                    ),
+                    subtitle: loc.local_store_leave_host_subtitle,
+                    trailing: TextButton(
+                      onPressed: controller.leaveLocalStoreHost,
+                      child: Text(loc.local_store_leave_host),
+                    ),
+                  ),
+                ] else
+                  _buildActionOrNavTile(
+                    icon: Icons.link_rounded,
+                    title: loc.local_store_join_other,
+                    subtitle: loc.local_store_join_other_subtitle,
+                    onTap: controller.joinLocalStoreHost,
+                    showChevron: true,
+                  ),
+              ],
+            );
+          }),
+        ]),
+      ],
+    );
+  }
+
+  Widget _buildBillingPlanContent(AppLocalizations loc) {
+    return _buildSection(loc.settings_section_billing, [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(loc.billing_mode_title, style: _titleStyle),
+            const Gap(4),
+            Text(loc.billing_mode_subtitle, style: _subtitleStyle),
+          ],
+        ),
+      ),
+      Obx(
+        () => BillingModeSelector(
+          selected: controller.billingAccessMode.value,
+          enabled: controller.canChangeBillingMode,
+          onSelected: controller.requestBillingModeChange,
+          subscriptionTitle: loc.billing_mode_subscription,
+          subscriptionSubtitle: loc.billing_mode_subscription_desc,
+          walletTitle: loc.billing_mode_wallet,
+          walletSubtitle: loc.billing_mode_wallet_desc,
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildNotificationsContent(AppLocalizations loc) {
+    return _buildSection(
+      loc.settings_section_notifications,
+      _withDividers([
+        _buildSwitchTile(
+          icon: Icons.notifications_outlined,
+          title: loc.settings_section_notifications,
+          subtitle: loc.settings_notifications_subtitle,
+          value: controller.notificationsEnabled,
+          onChanged: controller.setNotificationsEnabled,
+        ),
+        _buildTile(
+          icon: Icons.inbox_outlined,
+          title: loc.notification_history,
+          subtitle: loc.notification_history_subtitle,
+          trailing: Icon(
+            Icons.chevron_right,
+            color: Colors.grey[400],
+            size: 20,
+          ),
+          onTap: () => Modular.to.pushNamed(HomeMainRoutes.notifications),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildAppearanceContent(AppLocalizations loc) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSection(loc.settings_section_appearance, [
+          Obx(
+            () => _buildTile(
+              icon: Icons.palette_outlined,
+              title: loc.theme_color,
+              subtitle: themeController.selectedThemeColorName,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: themeController.themeColor.value,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey[400],
+                    size: 20,
+                  ),
+                ],
+              ),
+              onTap: () => _showThemeColorPicker(context, loc),
+            ),
+          ),
+        ]),
+        const Gap(24),
+        _buildSection(loc.settings_section_language_region, [
+          _buildActionOrNavTile(
+            icon: Icons.language,
+            title: loc.language,
+            subtitle: loc.change_app_language,
+            onTap: () => showLanguagePickerDialog(context),
+            showChevron: true,
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget _buildHelpContent(AppLocalizations loc) {
+    return _buildSection(loc.help_and_setup, [
+      _buildActionOrNavTile(
+        icon: Icons.support_outlined,
+        title: loc.help_and_setup,
+        subtitle: loc.help_subtitle,
+        onTap: () => Modular.to.pushNamed(HomeMainRoutes.helpSetup),
+        showChevron: true,
+      ),
+    ]);
+  }
+
 
   static const double _sidePadding = 16;
   static const double _tileVerticalPadding = 12;
@@ -483,75 +916,13 @@ class AppSettingsScreen extends StatelessWidget {
       title: title,
       subtitle: subtitle,
       trailing: Obx(
-        () => Switch(
+        () => SwitchWithOnOffLabel(
           value: value.value,
           onChanged: onChanged,
           activeColor: AppColor.primary,
         ),
       ),
     );
-  }
-
-  Widget _buildCashDrawerPinTile(BuildContext context, AppLocalizations loc) {
-    return Obx(() {
-      final selected = cashDrawerPinFromStorage(controller.cashDrawerPin.value);
-      return _buildTile(
-        icon: Icons.settings_input_component_outlined,
-        title: loc.cash_drawer_kick_pin,
-        subtitle: loc.cash_drawer_kick_pin_subtitle,
-        trailing: SegmentedButton<CashDrawerPin>(
-          segments: [
-            ButtonSegment(
-              value: CashDrawerPin.pin2,
-              label: Text(loc.cash_drawer_pin_2),
-            ),
-            ButtonSegment(
-              value: CashDrawerPin.pin5,
-              label: Text(loc.cash_drawer_pin_5),
-            ),
-          ],
-          selected: {selected},
-          onSelectionChanged: (set) {
-            controller.setCashDrawerPin(set.first);
-          },
-          style: const ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ),
-      );
-    });
-  }
-
-  Widget _buildPoPrintOrientationTile(AppLocalizations loc) {
-    return Obx(() {
-      final selected = controller.poPrintOrientation.value;
-      return _buildTile(
-        icon: Icons.print_outlined,
-        title: loc.settings_po_print_orientation,
-        subtitle: loc.settings_po_print_orientation_subtitle,
-        trailing: SegmentedButton<PoPrintOrientation>(
-          segments: [
-            ButtonSegment(
-              value: PoPrintOrientation.portrait,
-              label: Text(loc.po_print_portrait),
-            ),
-            ButtonSegment(
-              value: PoPrintOrientation.landscape,
-              label: Text(loc.po_print_landscape),
-            ),
-          ],
-          selected: {selected},
-          onSelectionChanged: (set) {
-            controller.setPoPrintOrientation(set.first);
-          },
-          style: const ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ),
-      );
-    });
   }
 
   Widget _buildActionOrNavTile({

@@ -368,7 +368,10 @@ class StaffAccess {
         path.startsWith('/add-regular-customer')) {
       return canAccessCustomers;
     }
-    if (path.startsWith('/app-settings')) return canManageSettings;
+    if (path.startsWith('/app-settings') ||
+        path.startsWith('/local-store-host')) {
+      return canManageSettings;
+    }
     if (path.startsWith('/tables')) return canAccessTables;
     if (path.startsWith('/kot-history') || path.startsWith('/kotHistory')) {
       return canViewKot || canReprintKot;

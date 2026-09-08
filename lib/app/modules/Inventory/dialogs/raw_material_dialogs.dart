@@ -359,7 +359,7 @@ Future<void> _showRawMaterialDialog(
             'name': nameCtrl.text.trim(),
             'category': (selectedCategory ?? '').trim(),
             'unit': unit,
-            if (!isEdit) 'currentStock': qty,
+            'currentStock': qty,
             'minStock': minStock,
             'purchasePrice': rate,
             'taxRate': taxRate,

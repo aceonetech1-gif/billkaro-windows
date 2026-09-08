@@ -1,4 +1,5 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
+import 'package:billkaro/app/Widgets/switch_with_on_off_label.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_controller.dart';
 import 'package:billkaro/app/modules/Items/product_form_extras.dart';
 import 'package:billkaro/app/modules/Items/product_variants_section.dart';
@@ -473,7 +474,7 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                       ),
                     ),
                     Obx(
-                      () => Switch(
+                      () => SwitchWithOnOffLabel(
                         value: controller.isAvailable.value,
                         activeColor: AppColor.primary.withOpacity(0.95),
                         activeTrackColor: AppColor.primary.withOpacity(0.25),
@@ -512,7 +513,7 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                       ),
                     ),
                     Obx(
-                      () => Switch(
+                      () => SwitchWithOnOffLabel(
                         value: controller.markAsFavorite.value,
                         activeColor: AppColor.primary.withOpacity(0.95),
                         activeTrackColor: AppColor.primary.withOpacity(0.25),
@@ -753,9 +754,9 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                               ],
                             ),
                           ),
-                          Switch(
+                          SwitchWithOnOffLabel(
                             value: controller.isComboItem.value,
-                            activeThumbColor: AppColor.primary.withValues(
+                            activeColor: AppColor.primary.withValues(
                               alpha: 0.95,
                             ),
                             activeTrackColor: AppColor.primary.withValues(

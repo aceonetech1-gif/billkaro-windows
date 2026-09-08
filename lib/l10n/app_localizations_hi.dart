@@ -305,6 +305,17 @@ class AppLocalizationsHi extends AppLocalizations {
   String get sync_across_multiple_devices => 'कई डिवाइस पर सिंक करें';
 
   @override
+  String get offline_mode => 'ऑफ़लाइन मोड';
+
+  @override
+  String get offline_mode_subtitle =>
+      'इंटरनेट न होने पर भी ऑर्डर सेव करने की अनुमति दें';
+
+  @override
+  String get offline_mode_disabled =>
+      'ऑफ़लाइन मोड बंद है। जारी रखने के लिए इंटरनेट से जुड़ें।';
+
+  @override
   String get add_and_manage_staff_members =>
       'स्टाफ सदस्यों को जोड़ें और प्रबंधित करें';
 
@@ -2019,6 +2030,59 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settings_section_general => 'सामान्य';
 
   @override
+  String get settings_section_orders_billing => 'ऑर्डर और बिलिंग';
+
+  @override
+  String get settings_section_orders_billing_desc =>
+      'बिल QR, ऑर्डर विवरण, ऑफ़र और डाउनलोड';
+
+  @override
+  String get settings_section_hardware => 'हार्डवेयर और किचन';
+
+  @override
+  String get settings_section_hardware_desc =>
+      'कैश ड्रॉअर, KOT और किचन डिस्प्ले';
+
+  @override
+  String get settings_section_sync_devices => 'सिंक और डिवाइस';
+
+  @override
+  String get settings_section_sync_devices_desc =>
+      'ऑफ़लाइन मोड, मल्टी-डिवाइस सिंक और लोकल नेटवर्क';
+
+  @override
+  String get settings_section_appearance_language => 'दिखावट और भाषा';
+
+  @override
+  String get settings_section_appearance_language_desc => 'थीम रंग और ऐप भाषा';
+
+  @override
+  String get settings_section_notifications_desc => 'अलर्ट और सूचना इतिहास';
+
+  @override
+  String get settings_section_billing_desc =>
+      'इस आउटलेट के लिए सब्सक्रिप्शन या वॉलेट एक्सेस';
+
+  @override
+  String get settings_section_help_desc => 'गाइड, सेटअप टिप्स और सहायता';
+
+  @override
+  String get settings_offers_promotions => 'ऑफ़र और प्रमोशन';
+
+  @override
+  String get settings_offers_promotions_subtitle =>
+      'BOGO, छूट, मुफ़्त आइटम और समय आधारित ऑफ़र';
+
+  @override
+  String get settings_search_hint => 'सेटिंग्स खोजें';
+
+  @override
+  String get settings_no_results => 'आपकी खोज से कोई सेटिंग नहीं मिली';
+
+  @override
+  String get settings_back_to_categories => 'सभी सेटिंग्स';
+
+  @override
   String get billing_list_view => 'बिलिंग सूची दृश्य';
 
   @override
@@ -3292,6 +3356,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get po_updated => 'खरीद ऑर्डर अपडेट हो गया';
+
+  @override
+  String get po_created => 'खरीद ऑर्डर सफलतापूर्वक बनाया गया';
 
   @override
   String get po_cannot_edit => 'केवल लंबित खरीद ऑर्डर संपादित किए जा सकते हैं';
@@ -5380,4 +5447,139 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get help_support_hours => 'उपलब्ध सुबह 10 बजे–शाम 6 बजे IST';
+
+  @override
+  String get settings_section_local_store => 'लोकल स्टोर नेटवर्क';
+
+  @override
+  String get local_store_host_mode => 'यह PC स्टोर होस्ट है';
+
+  @override
+  String get local_store_host_mode_subtitle =>
+      'स्टाफ फ़ोन और अन्य टिल उसी Wi‑Fi पर जुड़ते हैं — इंटरनेट की ज़रूरत नहीं';
+
+  @override
+  String get local_store_show_qr => 'जॉइन QR और स्थिति दिखाएँ';
+
+  @override
+  String get local_store_show_qr_subtitle =>
+      'वेटर जॉइन कर सकें, इसके लिए QR शेयर करें';
+
+  @override
+  String get local_store_join_other => 'दूसरे स्टोर होस्ट से जुड़ें';
+
+  @override
+  String get local_store_join_other_subtitle =>
+      'इस PC को स्टाफ / सेकेंडरी टिल की तरह इस्तेमाल करें — केवल होस्ट जॉइन कोड डालें';
+
+  @override
+  String get local_store_leave_host => 'जुड़े होस्ट को छोड़ें';
+
+  @override
+  String get local_store_leave_host_subtitle =>
+      'रिमोट स्टोर होस्ट का उपयोग बंद करें';
+
+  @override
+  String local_store_joined_status(String name) {
+    return 'होस्ट से जुड़े: $name';
+  }
+
+  @override
+  String get local_store_host_screen_title => 'स्टोर होस्ट (LAN)';
+
+  @override
+  String get local_store_scan_qr => 'स्टाफ डिवाइस पर यह QR स्कैन करें';
+
+  @override
+  String get local_store_same_wifi_hint =>
+      'इसी PC जैसा Wi‑Fi। इंटरनेट ज़रूरी नहीं।';
+
+  @override
+  String get local_store_join_code => 'जॉइन कोड';
+
+  @override
+  String get local_store_copy_link => 'जॉइन लिंक कॉपी करें';
+
+  @override
+  String get local_store_link_copied => 'जॉइन लिंक कॉपी हो गया';
+
+  @override
+  String get local_store_new_code => 'नया कोड';
+
+  @override
+  String get local_store_code_regenerated =>
+      'जॉइन कोड नया बना — स्टाफ को फिर से जुड़ना होगा';
+
+  @override
+  String get local_store_start_host => 'होस्ट शुरू करें';
+
+  @override
+  String get local_store_stop_host => 'होस्ट बंद करें';
+
+  @override
+  String local_store_host_running(int count) {
+    return 'होस्ट चल रहा है · $count स्टाफ जुड़े';
+  }
+
+  @override
+  String get local_store_host_stopped => 'होस्ट बंद है';
+
+  @override
+  String get local_store_host_howto =>
+      '1. सेवा के दौरान यह PC चालू रखें।\n2. स्टाफ फ़ोन/टिल उसी Wi‑Fi पर हों (गेस्ट / क्लाइंट आइसोलेशन बंद)।\n3. Windows Firewall में BillKaro को अनुमति दें।\n4. स्टाफ: BillKaro → Join store host → यही जॉइन कोड डालें।';
+
+  @override
+  String get local_store_join_title => 'कोड से जुड़ें';
+
+  @override
+  String get local_store_join_subtitle =>
+      'स्टोर होस्ट PC पर दिखाया जॉइन कोड डालें। उसी Wi‑Fi पर होना ज़रूरी है।';
+
+  @override
+  String get local_store_paste_link => 'जॉइन लिंक पेस्ट करें';
+
+  @override
+  String get local_store_host_ip => 'होस्ट IP';
+
+  @override
+  String get local_store_port => 'पोर्ट';
+
+  @override
+  String get local_store_join_action => 'जुड़ें';
+
+  @override
+  String get local_store_join_fields_required => 'जॉइन कोड ज़रूरी है';
+
+  @override
+  String get local_store_join_failed => 'होस्ट से नहीं जुड़ सके';
+
+  @override
+  String local_store_joined(String name) {
+    return '$name से जुड़ गए';
+  }
+
+  @override
+  String get local_store_left_host => 'स्टोर होस्ट छोड़ दिया';
+
+  @override
+  String get local_store_host_started => 'इस PC पर स्टोर होस्ट शुरू हो गया';
+
+  @override
+  String get local_store_host_stopped_toast => 'स्टोर होस्ट बंद हो गया';
+
+  @override
+  String get local_store_joined_staff_title => 'जुड़े स्टाफ';
+
+  @override
+  String get local_store_joined_staff_empty =>
+      'अभी कोई स्टाफ नहीं जुड़ा। जॉइन कोड या QR शेयर करें।';
+
+  @override
+  String get local_store_joined_via_code => 'कोड से जुड़े';
+
+  @override
+  String get local_store_joined_via_qr => 'QR से जुड़े';
+
+  @override
+  String get local_store_remove_staff => 'हटाएँ';
 }

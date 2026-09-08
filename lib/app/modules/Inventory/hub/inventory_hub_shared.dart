@@ -234,4 +234,29 @@ extension _InventoryHubShared on _InventoryHubScreenState {
       return iso;
     }
   }
+
+  Widget _stockExportButtons({double iconSize = 24}) {
+    if (!StaffAccess.canViewInventory) return const SizedBox.shrink();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: () {
+            if (!StaffAccess.ensure(StaffAccess.canViewInventory)) return;
+            controller.exportStockToExcel();
+          },
+          icon: Assets.svg.excel.svg(height: iconSize, width: iconSize),
+          tooltip: 'Export to Excel',
+        ),
+        IconButton(
+          onPressed: () {
+            if (!StaffAccess.ensure(StaffAccess.canViewInventory)) return;
+            controller.exportStockToPdf();
+          },
+          icon: Assets.pdf.image(height: iconSize, width: iconSize),
+          tooltip: 'Export to PDF',
+        ),
+      ],
+    );
+  }
 }

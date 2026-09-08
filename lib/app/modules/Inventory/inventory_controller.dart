@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:billkaro/app/modules/Inventory/services/inventory_stock_export_service.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
@@ -10,33 +13,45 @@ class InventoryController extends BaseController {
   final selectedTab = 0.obs;
   final searchQuery = ''.obs;
   final supplierSearchQuery = ''.obs;
+
   /// ALL | ACTIVE | INACTIVE
   final supplierStatusFilter = 'ALL'.obs;
+
   /// Null = all days
   final supplierDateFilter = Rxn<DateTime>();
   final showLowStockOnly = false.obs;
+
   /// ALL | In Stock | Low Stock | Out of Stock
   final rawMaterialStatusFilter = 'ALL'.obs;
+
   /// Empty string = all categories
   final rawMaterialCategoryFilter = ''.obs;
+
   /// Null = all days; otherwise only materials created / with activity that day
   final rawMaterialDateFilter = Rxn<DateTime>();
   final recipeSearchQuery = ''.obs;
+
   /// Empty = all menu items
   final recipeItemIdFilter = ''.obs;
+
   /// Empty = all materials
   final recipeMaterialIdFilter = ''.obs;
+
   /// Null = all days
   final recipeDateFilter = Rxn<DateTime>();
 
   /// Stock log filters (client-side on loaded transactions)
   final stockLogSearchQuery = ''.obs;
+
   /// Empty = all materials
   final stockLogMaterialIdFilter = ''.obs;
+
   /// ALL | PURCHASE | SALE | WASTAGE | ADJUSTMENT_IN | ADJUSTMENT_OUT | RETURN
   final stockLogTypeFilter = 'ALL'.obs;
+
   /// ALL | IN | OUT
   final stockLogDirectionFilter = 'ALL'.obs;
+
   /// Null = all days
   final stockLogDateFilter = Rxn<DateTime>();
 
@@ -50,10 +65,13 @@ class InventoryController extends BaseController {
   final productStock = <ProductStockData>[].obs;
   final productStockSearch = ''.obs;
   final showProductLowStockOnly = false.obs;
+
   /// ALL | In Stock | Low Stock | Out of Stock
   final productStockStatusFilter = 'ALL'.obs;
+
   /// Empty string = all categories
   final productStockCategoryFilter = ''.obs;
+
   /// Empty = all items; otherwise only these item ids are included
   final productStockItemIdFilter = <String>{}.obs;
   final categories = <CategoryData>[].obs;
@@ -125,18 +143,20 @@ class InventoryController extends BaseController {
       showLoader: false,
     );
     if (res is Map && res['data'] is List) {
-      final items = (res['data'] as List)
-          .map(
-            (e) => RawMaterialCategoryData.fromJson(
-              Map<String, dynamic>.from(e as Map),
-            ),
-          )
-          .where((c) => c.categoryName.isNotEmpty)
-          .toList()
-        ..sort(
-          (a, b) =>
-              a.categoryName.toLowerCase().compareTo(b.categoryName.toLowerCase()),
-        );
+      final items =
+          (res['data'] as List)
+              .map(
+                (e) => RawMaterialCategoryData.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
+              .where((c) => c.categoryName.isNotEmpty)
+              .toList()
+            ..sort(
+              (a, b) => a.categoryName.toLowerCase().compareTo(
+                b.categoryName.toLowerCase(),
+              ),
+            );
       rawMaterialCategoryItems.value = items;
     }
   }
@@ -166,12 +186,10 @@ class InventoryController extends BaseController {
         outletId: outletId,
       );
     }
-    return byKey.values.toList()
-      ..sort(
-        (a, b) => a.categoryName.toLowerCase().compareTo(
-              b.categoryName.toLowerCase(),
-            ),
-      );
+    return byKey.values.toList()..sort(
+      (a, b) =>
+          a.categoryName.toLowerCase().compareTo(b.categoryName.toLowerCase()),
+    );
   }
 
   int rawMaterialCountForCategory(String categoryName) {
@@ -197,9 +215,7 @@ class InventoryController extends BaseController {
   List<String> get rawMaterialListCategories {
     final cats = <String>{
       ...rawMaterialCategories,
-      ...rawMaterials
-          .map((e) => e.category.trim())
-          .where((c) => c.isNotEmpty),
+      ...rawMaterials.map((e) => e.category.trim()).where((c) => c.isNotEmpty),
     }.toList();
     cats.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return cats;
@@ -325,8 +341,9 @@ class InventoryController extends BaseController {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -366,8 +383,9 @@ class InventoryController extends BaseController {
                                         : () => Get.back(),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.grey[700],
-                                      side:
-                                          BorderSide(color: Colors.grey[300]!),
+                                      side: BorderSide(
+                                        color: Colors.grey[300]!,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -384,15 +402,15 @@ class InventoryController extends BaseController {
                                     onPressed: isSaving.value
                                         ? null
                                         : () => _submitQuickAddCategory(
-                                              formKey: formKey,
-                                              nameController: nameController,
-                                              isSaving: isSaving,
-                                            ),
+                                            formKey: formKey,
+                                            nameController: nameController,
+                                            isSaving: isSaving,
+                                          ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColor.primary,
                                       foregroundColor: Colors.white,
-                                      disabledBackgroundColor:
-                                          AppColor.primary.withOpacity(0.6),
+                                      disabledBackgroundColor: AppColor.primary
+                                          .withOpacity(0.6),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -498,8 +516,10 @@ class InventoryController extends BaseController {
       if (silent) {
         // Unique/duplicate races are fine; other failures stay silent.
         final msg =
-            (response is Map ? response['message'] : null)?.toString().toLowerCase() ??
-                '';
+            (response is Map ? response['message'] : null)
+                ?.toString()
+                .toLowerCase() ??
+            '';
         return msg.contains('exist') || msg.contains('duplicate');
       }
       final loc = AppLocalizations.of(Get.context!)!;
@@ -527,7 +547,9 @@ class InventoryController extends BaseController {
       showLoader: true,
     );
     if (res != null && (res is! Map || res['status'] == 'success')) {
-      final removed = rawMaterialCategoryItems.firstWhereOrNull((c) => c.id == id);
+      final removed = rawMaterialCategoryItems.firstWhereOrNull(
+        (c) => c.id == id,
+      );
       if (removed != null &&
           rawMaterialCategoryFilter.value.trim().toLowerCase() ==
               removed.categoryName.trim().toLowerCase()) {
@@ -538,8 +560,8 @@ class InventoryController extends BaseController {
       return true;
     }
     showError(
-      description: (res is Map ? res['message'] : null) ??
-          'Failed to delete category',
+      description:
+          (res is Map ? res['message'] : null) ?? 'Failed to delete category',
     );
     return false;
   }
@@ -582,8 +604,7 @@ class InventoryController extends BaseController {
     return ids;
   }
 
-  static DateTime _calendarDay(DateTime d) =>
-      DateTime(d.year, d.month, d.day);
+  static DateTime _calendarDay(DateTime d) => DateTime(d.year, d.month, d.day);
 
   bool get isRawMaterialDateToday {
     final date = rawMaterialDateFilter.value;
@@ -608,10 +629,9 @@ class InventoryController extends BaseController {
         '${_monthShort(date.month)} ${date.year}';
   }
 
-  String get rawMaterialStockValueLabel =>
-      hasRawMaterialDateFilter
-          ? (isRawMaterialDateToday ? "Today's Stock Value" : 'Stock Value')
-          : 'Stock Value';
+  String get rawMaterialStockValueLabel => hasRawMaterialDateFilter
+      ? (isRawMaterialDateToday ? "Today's Stock Value" : 'Stock Value')
+      : 'Stock Value';
 
   static String _monthShort(int month) {
     const months = [
@@ -635,9 +655,32 @@ class InventoryController extends BaseController {
     rawMaterialDateFilter.value = null;
   }
 
+  bool get hasRawMaterialFilters {
+    return rawMaterialStatusFilter.value != 'ALL' ||
+        showLowStockOnly.value ||
+        rawMaterialCategoryFilter.value.trim().isNotEmpty ||
+        hasRawMaterialDateFilter;
+  }
+
+  String get rawMaterialFiltersSummary {
+    final parts = <String>[];
+    final status = rawMaterialStatusFilter.value;
+    if (status != 'ALL') {
+      parts.add(status);
+    } else if (showLowStockOnly.value) {
+      parts.add('Low Stock');
+    }
+    final cat = rawMaterialCategoryFilter.value.trim();
+    if (cat.isNotEmpty) parts.add(cat);
+    if (hasRawMaterialDateFilter) {
+      parts.add(rawMaterialDateFilterLabel);
+    }
+    if (parts.isEmpty) return 'All materials';
+    return parts.join(' · ');
+  }
+
   Future<void> setRawMaterialDateFilter(DateTime? date) async {
-    rawMaterialDateFilter.value =
-        date == null ? null : _calendarDay(date);
+    rawMaterialDateFilter.value = date == null ? null : _calendarDay(date);
     if (date != null) {
       await loadTransactions(limit: 500);
     }
@@ -707,9 +750,7 @@ class InventoryController extends BaseController {
       }).toList();
     }
 
-    items.sort(
-      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-    );
+    items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return items;
   }
 
@@ -763,14 +804,17 @@ class InventoryController extends BaseController {
     );
     if (res is Map && res['data'] is List) {
       transactions.value = (res['data'] as List)
-          .map((e) => StockTransactionData.fromJson(Map<String, dynamic>.from(e)))
+          .map(
+            (e) => StockTransactionData.fromJson(Map<String, dynamic>.from(e)),
+          )
           .toList();
     }
   }
 
   static bool isStockInType(String type) {
     final t = type.trim().toUpperCase();
-    return t.contains('IN') || t == 'PURCHASE' || t == 'RETURN';
+    // RETURN = return to supplier (stock out)
+    return t.contains('IN') || t == 'PURCHASE';
   }
 
   List<StockTransactionData> get filteredTransactions {
@@ -857,8 +901,7 @@ class InventoryController extends BaseController {
   }
 
   void setStockLogDateFilter(DateTime? date) {
-    stockLogDateFilter.value =
-        date == null ? null : _calendarDay(date);
+    stockLogDateFilter.value = date == null ? null : _calendarDay(date);
   }
 
   void clearStockLogFilters() {
@@ -913,12 +956,8 @@ class InventoryController extends BaseController {
       ...categories
           .map((c) => c.categoryName.trim())
           .where((name) => name.isNotEmpty),
-      ...productStock
-          .map((e) => e.category.trim())
-          .where((c) => c.isNotEmpty),
-      ...menuItems
-          .map((e) => e.category.trim())
-          .where((c) => c.isNotEmpty),
+      ...productStock.map((e) => e.category.trim()).where((c) => c.isNotEmpty),
+      ...menuItems.map((e) => e.category.trim()).where((c) => c.isNotEmpty),
     }.toList();
     cats.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return cats;
@@ -980,6 +1019,7 @@ class InventoryController extends BaseController {
     double? taxPercent,
     String? category,
     String? supplierId,
+    String? variantId,
     bool removeTracking = false,
   }) async {
     if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
@@ -995,7 +1035,9 @@ class InventoryController extends BaseController {
         if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
         if (taxPercent != null) 'taxPercent': taxPercent,
         if (category != null && category.isNotEmpty) 'category': category,
-        if (supplierId != null && supplierId.isNotEmpty) 'supplierId': supplierId,
+        if (supplierId != null && supplierId.isNotEmpty)
+          'supplierId': supplierId,
+        if (variantId != null && variantId.isNotEmpty) 'variantId': variantId,
         if (removeTracking) 'removeTracking': true,
       }),
     );
@@ -1006,9 +1048,10 @@ class InventoryController extends BaseController {
     return false;
   }
 
-  Future<bool> deleteProductStock(String itemId) async {
+  Future<bool> deleteProductStock(ProductStockData item) async {
     return adjustProductStock(
-      itemId: itemId,
+      itemId: item.menuItemId,
+      variantId: item.stockVariantId,
       adjustmentType: 'ADJUSTMENT',
       quantity: 0,
       reason: 'Other',
@@ -1020,12 +1063,14 @@ class InventoryController extends BaseController {
   Future<List<ProductStockMovementData>> loadProductStockMovements({
     required String itemId,
     String? type,
+    String? variantId,
   }) async {
     final res = await callApi(
       apiClient.getProductStockMovements(
         outletId,
         itemId,
         type == null || type == 'ALL' ? null : type,
+        variantId,
       ),
       showLoader: false,
     );
@@ -1046,11 +1091,7 @@ class InventoryController extends BaseController {
 
   /// Loads only data needed for recipe management (menu item screen, dialogs).
   Future<void> loadRecipeData() async {
-    await Future.wait([
-      loadRawMaterials(),
-      loadMenuItems(),
-      loadRecipes(),
-    ]);
+    await Future.wait([loadRawMaterials(), loadMenuItems(), loadRecipes()]);
   }
 
   List<RecipeData> recipesForItem(String itemId) =>
@@ -1164,23 +1205,62 @@ class InventoryController extends BaseController {
     return false;
   }
 
-  Future<bool> updateRawMaterial(
-    String id,
-    Map<String, dynamic> body,
-  ) async {
+  Future<bool> updateRawMaterial(String id, Map<String, dynamic> body) async {
     if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
-    final category = (body['category'] as String?)?.trim() ?? '';
+
+    // Update API does not accept currentStock — apply qty via stock transaction.
+    final payload = Map<String, dynamic>.from(body);
+    final desiredStock = (payload.remove('currentStock') as num?)?.toDouble();
+
+    final category = (payload['category'] as String?)?.trim() ?? '';
     if (category.isNotEmpty) {
       await _ensureRawMaterialCategory(category, silent: true);
     }
-    final res = await callApi(apiClient.updateRawMaterial(outletId, id, body));
-    if (res != null) {
-      await loadRawMaterials();
-      await loadRawMaterialCategories();
-      await loadDashboard();
-      return true;
+
+    final res = await callApi(
+      apiClient.updateRawMaterial(outletId, id, payload),
+    );
+    if (res == null) return false;
+
+    if (desiredStock != null) {
+      final previousStock =
+          rawMaterials.firstWhereOrNull((m) => m.id == id)?.currentStock ??
+          (res is Map && res['data'] is Map
+              ? (res['data']['currentStock'] as num?)?.toDouble()
+              : null);
+
+      if (previousStock != null) {
+        final diff = desiredStock - previousStock;
+        if (diff.abs() > 0.0001) {
+          final tx = await callApi(
+            apiClient.createStockTransaction(outletId, {
+              'userId': userId,
+              'outletId': outletId,
+              'rawMaterialId': id,
+              'type': diff > 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT',
+              'quantity': diff.abs(),
+              'notes': 'Stock updated from edit',
+            }),
+          );
+          if (tx == null) {
+            await Future.wait([
+              loadRawMaterials(),
+              loadRawMaterialCategories(),
+              loadDashboard(),
+            ]);
+            return false;
+          }
+        }
+      }
     }
-    return false;
+
+    await Future.wait([
+      loadRawMaterials(),
+      loadRawMaterialCategories(),
+      loadDashboard(),
+      loadTransactions(),
+    ]);
+    return true;
   }
 
   Future<bool> deleteRawMaterial(String id) async {
@@ -1275,13 +1355,13 @@ class InventoryController extends BaseController {
         'notes': notes,
       }),
     );
-    if (res != null) {
-      await loadRawMaterials();
-      await loadTransactions();
-      await loadDashboard();
-      return true;
-    }
-    return false;
+    if (res == null) return false;
+
+    // Refresh in background so the dialog can close immediately.
+    unawaited(
+      Future.wait([loadRawMaterials(), loadTransactions(), loadDashboard()]),
+    );
+    return true;
   }
 
   Future<bool> createRecipe({
@@ -1355,9 +1435,7 @@ class InventoryController extends BaseController {
 
     final existing = recipesForItem(itemId);
     final existingById = {for (final r in existing) r.id: r};
-    final existingByMaterial = {
-      for (final r in existing) r.rawMaterialId: r,
-    };
+    final existingByMaterial = {for (final r in existing) r.rawMaterialId: r};
     final keptIds = <String>{};
 
     var allOk = true;
@@ -1486,17 +1564,34 @@ class InventoryController extends BaseController {
   }
 
   String materialName(String id) {
-    return rawMaterials
-            .firstWhereOrNull((m) => m.id == id)
-            ?.name ??
-        id;
+    return rawMaterials.firstWhereOrNull((m) => m.id == id)?.name ?? id;
   }
 
   String menuItemName(String id) {
-    return menuItems
-            .firstWhereOrNull((i) => i.id == id)
-            ?.itemName ??
+    return menuItems.firstWhereOrNull((i) => i.id == id)?.itemName ??
         recipes.firstWhereOrNull((r) => r.itemId == id)?.itemName ??
         id;
+  }
+
+  Future<void> exportStockToExcel() async {
+    if (!StaffAccess.ensure(StaffAccess.canViewInventory)) return;
+    await InventoryStockExportService.exportExcel(
+      materials: filteredRawMaterials,
+      supplierName: rawMaterialSupplierName,
+      filterSummary: rawMaterialFiltersSummary,
+      outletName: appPref.selectedOutlet?.businessName,
+      totalValue: rawMaterialTotalValue,
+    );
+  }
+
+  Future<void> exportStockToPdf() async {
+    if (!StaffAccess.ensure(StaffAccess.canViewInventory)) return;
+    await InventoryStockExportService.exportPdf(
+      materials: filteredRawMaterials,
+      supplierName: rawMaterialSupplierName,
+      filterSummary: rawMaterialFiltersSummary,
+      outletName: appPref.selectedOutlet?.businessName,
+      totalValue: rawMaterialTotalValue,
+    );
   }
 }

@@ -13,6 +13,7 @@ class AppNotificationItem {
   final String? orderId;
   final String? billNumber;
   final String? tableNumber;
+  final String? filePath;
   final String createdAtIso;
   final bool read;
 
@@ -24,6 +25,7 @@ class AppNotificationItem {
     this.orderId,
     this.billNumber,
     this.tableNumber,
+    this.filePath,
     required this.createdAtIso,
     this.read = false,
   });
@@ -40,6 +42,7 @@ class AppNotificationItem {
       orderId: orderId,
       billNumber: billNumber,
       tableNumber: tableNumber,
+      filePath: filePath,
       createdAtIso: createdAtIso,
       read: read ?? this.read,
     );
@@ -53,6 +56,7 @@ class AppNotificationItem {
         'orderId': orderId,
         'billNumber': billNumber,
         'tableNumber': tableNumber,
+        'filePath': filePath,
         'createdAtIso': createdAtIso,
         'read': read,
       };
@@ -70,6 +74,7 @@ class AppNotificationItem {
       orderId: json['orderId']?.toString(),
       billNumber: json['billNumber']?.toString(),
       tableNumber: json['tableNumber']?.toString(),
+      filePath: json['filePath']?.toString(),
       createdAtIso: json['createdAtIso']?.toString() ??
           DateTime.now().toUtc().toIso8601String(),
       read: json['read'] == true,

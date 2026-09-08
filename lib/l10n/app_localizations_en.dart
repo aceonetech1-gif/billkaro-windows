@@ -301,6 +301,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sync_across_multiple_devices => 'Sync across multiple devices';
 
   @override
+  String get offline_mode => 'Offline mode';
+
+  @override
+  String get offline_mode_subtitle =>
+      'Allow saving orders when internet is unavailable';
+
+  @override
+  String get offline_mode_disabled =>
+      'Offline mode is turned off. Connect to the internet to continue.';
+
+  @override
   String get add_and_manage_staff_members => 'Add and manage staff members';
 
   @override
@@ -594,7 +605,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get send_invite => 'Send Invite';
 
   @override
-  String get welcome_to_billkaro => 'Welcome to BillKaro\n Chill Karo';
+  String get welcome_to_billkaro => 'Welcome to Bill Kro\n Chill Kro';
 
   @override
   String get manage_business_ease => 'Manage your business with ease';
@@ -2011,6 +2022,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings_section_general => 'General';
 
   @override
+  String get settings_section_orders_billing => 'Orders & billing';
+
+  @override
+  String get settings_section_orders_billing_desc =>
+      'Bill QR, order details, offers and downloads';
+
+  @override
+  String get settings_section_hardware => 'Hardware & kitchen';
+
+  @override
+  String get settings_section_hardware_desc =>
+      'Cash drawer, KOT and kitchen display';
+
+  @override
+  String get settings_section_sync_devices => 'Sync & devices';
+
+  @override
+  String get settings_section_sync_devices_desc =>
+      'Offline mode, multi-device sync and local network';
+
+  @override
+  String get settings_section_appearance_language => 'Appearance & language';
+
+  @override
+  String get settings_section_appearance_language_desc =>
+      'Theme color and app language';
+
+  @override
+  String get settings_section_notifications_desc =>
+      'Alerts and notification history';
+
+  @override
+  String get settings_section_billing_desc =>
+      'Subscription or wallet access for this outlet';
+
+  @override
+  String get settings_section_help_desc => 'Guides, setup tips and support';
+
+  @override
+  String get settings_offers_promotions => 'Offers & promotions';
+
+  @override
+  String get settings_offers_promotions_subtitle =>
+      'BOGO, discounts, free items and time offers';
+
+  @override
+  String get settings_search_hint => 'Search settings';
+
+  @override
+  String get settings_no_results => 'No settings match your search';
+
+  @override
+  String get settings_back_to_categories => 'All settings';
+
+  @override
   String get billing_list_view => 'Billing list view';
 
   @override
@@ -3278,6 +3344,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get po_updated => 'Purchase order updated';
+
+  @override
+  String get po_created => 'Purchase order created successfully';
 
   @override
   String get po_cannot_edit => 'Only pending purchase orders can be edited';
@@ -5361,4 +5430,139 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get help_support_hours => 'Available 10am–6pm IST';
+
+  @override
+  String get settings_section_local_store => 'Local store network';
+
+  @override
+  String get local_store_host_mode => 'This PC is the store host';
+
+  @override
+  String get local_store_host_mode_subtitle =>
+      'Staff phones and other tills connect over the same Wi‑Fi — works without internet';
+
+  @override
+  String get local_store_show_qr => 'Show join QR & status';
+
+  @override
+  String get local_store_show_qr_subtitle =>
+      'Share the QR so waiters can join this host';
+
+  @override
+  String get local_store_join_other => 'Join another store host';
+
+  @override
+  String get local_store_join_other_subtitle =>
+      'Use this PC as a staff / secondary till — enter the host join code only';
+
+  @override
+  String get local_store_leave_host => 'Leave joined host';
+
+  @override
+  String get local_store_leave_host_subtitle =>
+      'Stop using the remote store host';
+
+  @override
+  String local_store_joined_status(String name) {
+    return 'Joined host: $name';
+  }
+
+  @override
+  String get local_store_host_screen_title => 'Store host (LAN)';
+
+  @override
+  String get local_store_scan_qr => 'Scan this QR on staff devices';
+
+  @override
+  String get local_store_same_wifi_hint =>
+      'Same Wi‑Fi as this PC. Internet is not required.';
+
+  @override
+  String get local_store_join_code => 'Join code';
+
+  @override
+  String get local_store_copy_link => 'Copy join link';
+
+  @override
+  String get local_store_link_copied => 'Join link copied';
+
+  @override
+  String get local_store_new_code => 'New code';
+
+  @override
+  String get local_store_code_regenerated =>
+      'Join code regenerated — staff must re-join';
+
+  @override
+  String get local_store_start_host => 'Start host';
+
+  @override
+  String get local_store_stop_host => 'Stop host';
+
+  @override
+  String local_store_host_running(int count) {
+    return 'Host running · $count staff connected';
+  }
+
+  @override
+  String get local_store_host_stopped => 'Host is stopped';
+
+  @override
+  String get local_store_host_howto =>
+      '1. Keep this PC on during service.\n2. Connect staff phones / tills to the same Wi‑Fi (disable guest / client isolation).\n3. Allow Windows Firewall for BillKaro when prompted.\n4. Staff open BillKaro → Join store host → enter this join code.';
+
+  @override
+  String get local_store_join_title => 'Join using code';
+
+  @override
+  String get local_store_join_subtitle =>
+      'Enter the join code shown on the store host PC. Same Wi‑Fi required.';
+
+  @override
+  String get local_store_paste_link => 'Paste join link';
+
+  @override
+  String get local_store_host_ip => 'Host IP';
+
+  @override
+  String get local_store_port => 'Port';
+
+  @override
+  String get local_store_join_action => 'Join';
+
+  @override
+  String get local_store_join_fields_required => 'Join code is required';
+
+  @override
+  String get local_store_join_failed => 'Could not join host';
+
+  @override
+  String local_store_joined(String name) {
+    return 'Joined $name';
+  }
+
+  @override
+  String get local_store_left_host => 'Left the store host';
+
+  @override
+  String get local_store_host_started => 'Store host started on this PC';
+
+  @override
+  String get local_store_host_stopped_toast => 'Store host stopped';
+
+  @override
+  String get local_store_joined_staff_title => 'Joined staff';
+
+  @override
+  String get local_store_joined_staff_empty =>
+      'No staff joined yet. Share the join code or QR.';
+
+  @override
+  String get local_store_joined_via_code => 'Joined via code';
+
+  @override
+  String get local_store_joined_via_qr => 'Joined via QR';
+
+  @override
+  String get local_store_remove_staff => 'Remove';
 }

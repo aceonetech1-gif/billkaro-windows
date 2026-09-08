@@ -79,7 +79,9 @@ Future<void> showStockAdjustDialog(
               quantity: qty,
               notes: notesCtrl.text.trim(),
             );
-            if (ok) Get.back();
+            if (!ok) return;
+            Get.back();
+            showSuccess(description: 'Stock updated');
           },
           child: Text(loc.update_stock),
         ),

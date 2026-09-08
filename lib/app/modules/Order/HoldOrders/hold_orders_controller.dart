@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
+import 'package:billkaro/app/services/local_store/local_store_orders_cache.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 
@@ -49,13 +50,19 @@ class HoldOrdersController extends BaseController {
       List<OrderModel> apiOrders = [];
       List<OrderModel> localOrders = [];
 
+      if (appPref.localStoreClientJoined && !loadMore) {
+        await LocalStoreOrdersCache.pullFromHost();
+      }
+
       /// 🔹 Always load local orders (only on initial load)
       if (!loadMore) {
         localOrders = await db.getAllOrders(outletId: outletId);
       }
 
       /// 🔹 Fetch API orders if online (only if not already loaded or forced or loading more)
-      if (isOnline && (!_hasLoadedFromApi || forceApiRefresh || loadMore)) {
+      if (!appPref.localStoreClientJoined &&
+          isOnline &&
+          (!_hasLoadedFromApi || forceApiRefresh || loadMore)) {
         debugPrint(
           '🌐 Internet available → fetching from API - Page: ${currentPage.value}',
         );

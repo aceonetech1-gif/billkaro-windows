@@ -1,7 +1,24 @@
 import 'dart:io';
 
+import 'package:billkaro/app/services/download/download_notification_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/widgets.dart';
+
+@pragma('vm:entry-point')
+Future<void> downloadNotificationTapBackground(
+    NotificationResponse response) async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final payload = response.payload?.trim() ?? '';
+  if (payload.isEmpty) return;
+
+  if (payload.contains('/') ||
+      payload.contains('\\') ||
+      payload.startsWith('file://')) {
+    await DownloadNotificationService.openDownloadedFile(payload);
+  }
+}
 
 /// OS-level notifications (Android / iOS). Windows uses in-app alerts only
 /// (v17 plugin has no Windows native module — avoids VS ATL build requirement).
@@ -49,6 +66,9 @@ class AppBackgroundNotificationService {
 
       await _plugin!.initialize(
         const InitializationSettings(android: android, iOS: ios),
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+        onDidReceiveBackgroundNotificationResponse:
+            downloadNotificationTapBackground,
       );
 
       if (Platform.isAndroid) {
@@ -292,6 +312,15 @@ class AppBackgroundNotificationService {
       );
     } catch (e) {
       debugPrint('❌ [BACKGROUND NOTIFY] download progress failed: $e');
+    }
+  }
+
+  void _onNotificationTapped(NotificationResponse response) {
+    final payload = response.payload?.trim() ?? '';
+    if (payload.isEmpty) return;
+    // Download notifications use the absolute file path as payload.
+    if (payload.contains('/') || payload.contains('\\') || payload.startsWith('file://')) {
+      DownloadNotificationService.openDownloadedFile(payload);
     }
   }
 }

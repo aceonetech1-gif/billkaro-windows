@@ -8,6 +8,8 @@ import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/services/Synchronisatioin/synchronisation.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
+import 'package:billkaro/app/services/local_store/local_store_host_service.dart';
+import 'package:billkaro/app/services/local_store/local_store_session.dart';
 import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/app_binding.dart';
 import 'package:billkaro/config/app_theme.dart';
@@ -211,6 +213,22 @@ void main(List<String> args) async {
         await SyncManager().initialize();
       } catch (e) {
         debugPrint('⚠️ [INIT] SyncManager failed: $e');
+      }
+    }
+
+    // LAN store host (staff devices on same Wi‑Fi without internet)
+    if (!isKitchenDisplayWindow) {
+      try {
+        final localStore = Get.put(LocalStoreHostService(), permanent: true);
+        await localStore.initFromPrefs();
+      } catch (e) {
+        debugPrint('⚠️ [INIT] LocalStoreHostService failed: $e');
+      }
+      try {
+        final pref = Get.find<AppPref>();
+        await restoreLocalStoreClientSession(pref);
+      } catch (e) {
+        debugPrint('⚠️ [INIT] Local store client session restore failed: $e');
       }
     }
 

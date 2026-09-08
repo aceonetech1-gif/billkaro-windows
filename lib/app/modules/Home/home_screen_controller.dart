@@ -11,6 +11,7 @@ import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
+import 'package:billkaro/app/services/local_store/local_store_orders_cache.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/staff_access.dart';
@@ -181,6 +182,11 @@ class HomeScreenController extends BaseController {
 
       debugPrint('🔄 isOnline: $isOnline');
 
+      // Petpooja-style: when joined to host, refresh cache from LAN first.
+      if (appPref.localStoreClientJoined) {
+        await LocalStoreOrdersCache.pullFromHost();
+      }
+
       /// ===============================
       /// 📦 STEP 1 → ALWAYS LOAD SQLITE
       /// ===============================
@@ -194,7 +200,9 @@ class HomeScreenController extends BaseController {
       /// ===============================
       /// 🔌 STEP 2 → IF ONLINE, SYNC API (only if not already loaded or forced)
       /// ===============================
-      if (isOnline && (!_hasLoadedFromApi || forceApiRefresh)) {
+      if (!appPref.localStoreClientJoined &&
+          isOnline &&
+          (!_hasLoadedFromApi || forceApiRefresh)) {
         debugPrint('🌐 Internet available → fetching from API');
 
         final response = await callApi(

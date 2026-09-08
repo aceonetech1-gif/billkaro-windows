@@ -1,4 +1,5 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
+import 'package:billkaro/app/Widgets/switch_with_on_off_label.dart';
 import 'package:billkaro/app/Widgets/horizontal_scroll_with_arrows.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
@@ -23,14 +24,18 @@ int _menuItemGridColumns(double availableWidth) {
 
 bool _menuItemUseCompactCard(double tileWidth) => tileWidth < 340;
 
-double _menuItemGridAspectRatio({
+double _menuItemGridMainAxisExtent({
   required double tileWidth,
   required bool compact,
+  required bool isTablet,
 }) {
   if (compact) {
-    return tileWidth / (tileWidth * 0.72 + 88);
+    const verticalPadding = 20.0;
+    const bottomSectionHeight = 170.0;
+    final imageHeight = (tileWidth - verticalPadding) / 1.15;
+    return verticalPadding + imageHeight + bottomSectionHeight;
   }
-  return (tileWidth / 112).clamp(2.0, 4.5);
+  return isTablet ? 140.0 : 130.0;
 }
 
 class MenuItemScreen extends StatefulWidget {
@@ -173,7 +178,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 // Items
                 Expanded(
                   child: isDesktop
-                      ? _buildDesktopContent(loc, screenWidth)
+                      ? _buildDesktopContent(loc, screenWidth, isTablet)
                       : _buildItemsList(loc, isTablet, screenWidth),
                 ),
               ],
@@ -458,7 +463,11 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
     );
   }
 
-  Widget _buildDesktopContent(AppLocalizations loc, double screenWidth) {
+  Widget _buildDesktopContent(
+    AppLocalizations loc,
+    double screenWidth,
+    bool isTablet,
+  ) {
     final categoryWidth = screenWidth < 1200 ? 240.0 : 300.0;
 
     return Padding(
@@ -468,7 +477,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         children: [
           SizedBox(width: categoryWidth, child: _buildDesktopCategories(loc)),
           const SizedBox(width: 16),
-          Expanded(child: _buildItemsGrid(loc, screenWidth)),
+          Expanded(child: _buildItemsGrid(loc, screenWidth, isTablet)),
         ],
       ),
     );
@@ -629,7 +638,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
     });
   }
 
-  Widget _buildItemsGrid(AppLocalizations loc, double screenWidth) {
+  Widget _buildItemsGrid(AppLocalizations loc, double screenWidth, bool isTablet) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
@@ -637,9 +646,10 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         const spacing = 12.0;
         final tileWidth = (availableWidth - (columns - 1) * spacing) / columns;
         final compact = _menuItemUseCompactCard(tileWidth);
-        final childAspectRatio = _menuItemGridAspectRatio(
+        final mainAxisExtent = _menuItemGridMainAxisExtent(
           tileWidth: tileWidth,
           compact: compact,
+          isTablet: isTablet,
         );
 
         return Obx(() {
@@ -703,7 +713,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   crossAxisCount: columns,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: spacing,
-                  childAspectRatio: childAspectRatio,
+                  mainAxisExtent: mainAxisExtent,
                 ),
                 itemCount: displayItems.length + 1,
                 itemBuilder: (context, index) {
@@ -1139,9 +1149,10 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               final tileWidth =
                   (safeWidth - (isTablet ? 32 : 24) - spacing) / columns;
               final compact = true;
-              final childAspectRatio = _menuItemGridAspectRatio(
+              final mainAxisExtent = _menuItemGridMainAxisExtent(
                 tileWidth: tileWidth,
                 compact: compact,
+                isTablet: isTablet,
               );
 
               return GridView.builder(
@@ -1152,7 +1163,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   crossAxisCount: columns,
                   crossAxisSpacing: spacing,
                   mainAxisSpacing: isTablet ? 12 : 10,
-                  childAspectRatio: childAspectRatio,
+                  mainAxisExtent: mainAxisExtent,
                 ),
                 itemCount: displayItems.length + 1, // +1 for bottom loader
                 itemBuilder: (context, index) {
@@ -1500,6 +1511,8 @@ class _ItemCard extends StatelessWidget {
           },
           borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
           child: Container(
+            width: double.infinity,
+            height: double.infinity,
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColor.primary.withOpacity(0.06)
@@ -1670,8 +1683,9 @@ class _ItemCard extends StatelessWidget {
         if (showToggle)
           Obx(() {
             final isAvailable = controller.isItemAvailable(item.id);
-            return Switch(
+            return SwitchWithOnOffLabel(
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              scale: compact ? 0.88 : null,
               value: isAvailable,
               onChanged: (_) => controller.toggleItemAvailability(item.id),
               activeColor: AppColor.primary.withOpacity(0.9),
@@ -1690,51 +1704,64 @@ class _ItemCard extends StatelessWidget {
     bool selectionMode,
     bool isSelected,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (selectionMode) ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Checkbox(
-              value: isSelected,
-              activeColor: AppColor.primary,
-              onChanged: (_) => controller.toggleItemSelection(item.id),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const bottomSectionHeight = 94.0;
+        final selectionExtra = selectionMode ? 52.0 : 0.0;
+        final maxImageFromWidth = constraints.maxWidth / 1.15;
+        final imageHeight =
+            (constraints.maxHeight - bottomSectionHeight - selectionExtra).clamp(
+              64.0,
+              maxImageFromWidth,
+            );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (selectionMode) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Checkbox(
+                  value: isSelected,
+                  activeColor: AppColor.primary,
+                  onChanged: (_) => controller.toggleItemSelection(item.id),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+            SizedBox(
+              height: imageHeight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
+                child: _buildImageContent(imageUrl),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-        ],
-        AspectRatio(
-          aspectRatio: 1.15,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
-            child: _buildImageContent(imageUrl),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          item.itemName,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: isTablet ? 15 : 14,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-            height: 1.2,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '₹${item.salePrice.toStringAsFixed(0)}',
-          style: TextStyle(
-            fontSize: isTablet ? 14 : 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildActions(context, loc, controller, compact: true),
-      ],
+            const SizedBox(height: 8),
+            Text(
+              item.itemName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isTablet ? 15 : 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '₹${item.salePrice.toStringAsFixed(0)}',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const Spacer(),
+            _buildActions(context, loc, controller, compact: true),
+          ],
+        );
+      },
     );
   }
 
@@ -1794,13 +1821,10 @@ class _ItemCard extends StatelessWidget {
               final canDelete = StaffAccess.canDeleteProducts;
               final showMenu = StaffAccess.canShowMenuItemOverflowMenu;
               final showToggle = StaffAccess.canShowItemAvailabilityToggle;
-              return SizedBox(
-                width: isTablet ? 72 : 64,
-                height: isTablet ? 80 : 70,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
                     if (showMenu)
                       SizedBox(
                         height: isTablet ? 34 : 30,
@@ -1864,9 +1888,10 @@ class _ItemCard extends StatelessWidget {
                       Obx(() {
                         final isAvailable =
                             controller.isItemAvailable(item.id);
-                        return Switch(
+                        return SwitchWithOnOffLabel(
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
+                          scale: 0.88,
                           value: isAvailable,
                           onChanged: (_) =>
                               controller.toggleItemAvailability(item.id),
@@ -1874,8 +1899,7 @@ class _ItemCard extends StatelessWidget {
                           activeTrackColor: AppColor.primary.withOpacity(0.2),
                         );
                       }),
-                  ],
-                ),
+                ],
               );
             },
           ),

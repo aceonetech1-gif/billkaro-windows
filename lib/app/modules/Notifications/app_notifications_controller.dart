@@ -1,3 +1,4 @@
+import 'package:billkaro/app/services/download/download_notification_service.dart';
 import 'package:billkaro/app/services/notification/app_notification_item.dart';
 import 'package:billkaro/app/services/notification/app_notification_store.dart';
 import 'package:billkaro/config/config.dart';
@@ -12,6 +13,13 @@ class AppNotificationsController extends BaseController {
   }
 
   Future<void> markRead(String id) => store.markRead(id);
+
+  Future<void> onNotificationTap(AppNotificationItem item) async {
+    await markRead(item.id);
+    if (item.type == AppNotificationType.download) {
+      await DownloadNotificationService.openDownloadedFile(item.filePath);
+    }
+  }
 
   Future<void> markAllRead() => store.markAllRead();
 

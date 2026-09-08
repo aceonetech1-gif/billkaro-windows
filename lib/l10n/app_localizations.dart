@@ -653,6 +653,24 @@ abstract class AppLocalizations {
   /// **'Sync across multiple devices'**
   String get sync_across_multiple_devices;
 
+  /// No description provided for @offline_mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode'**
+  String get offline_mode;
+
+  /// No description provided for @offline_mode_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow saving orders when internet is unavailable'**
+  String get offline_mode_subtitle;
+
+  /// No description provided for @offline_mode_disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode is turned off. Connect to the internet to continue.'**
+  String get offline_mode_disabled;
+
   /// No description provided for @add_and_manage_staff_members.
   ///
   /// In en, this message translates to:
@@ -1208,7 +1226,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcome_to_billkaro.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to BillKaro\n Chill Karo'**
+  /// **'Welcome to Bill Kro\n Chill Kro'**
   String get welcome_to_billkaro;
 
   /// No description provided for @manage_business_ease.
@@ -3797,6 +3815,102 @@ abstract class AppLocalizations {
   /// **'General'**
   String get settings_section_general;
 
+  /// No description provided for @settings_section_orders_billing.
+  ///
+  /// In en, this message translates to:
+  /// **'Orders & billing'**
+  String get settings_section_orders_billing;
+
+  /// No description provided for @settings_section_orders_billing_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill QR, order details, offers and downloads'**
+  String get settings_section_orders_billing_desc;
+
+  /// No description provided for @settings_section_hardware.
+  ///
+  /// In en, this message translates to:
+  /// **'Hardware & kitchen'**
+  String get settings_section_hardware;
+
+  /// No description provided for @settings_section_hardware_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash drawer, KOT and kitchen display'**
+  String get settings_section_hardware_desc;
+
+  /// No description provided for @settings_section_sync_devices.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync & devices'**
+  String get settings_section_sync_devices;
+
+  /// No description provided for @settings_section_sync_devices_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode, multi-device sync and local network'**
+  String get settings_section_sync_devices_desc;
+
+  /// No description provided for @settings_section_appearance_language.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance & language'**
+  String get settings_section_appearance_language;
+
+  /// No description provided for @settings_section_appearance_language_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme color and app language'**
+  String get settings_section_appearance_language_desc;
+
+  /// No description provided for @settings_section_notifications_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts and notification history'**
+  String get settings_section_notifications_desc;
+
+  /// No description provided for @settings_section_billing_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription or wallet access for this outlet'**
+  String get settings_section_billing_desc;
+
+  /// No description provided for @settings_section_help_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Guides, setup tips and support'**
+  String get settings_section_help_desc;
+
+  /// No description provided for @settings_offers_promotions.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers & promotions'**
+  String get settings_offers_promotions;
+
+  /// No description provided for @settings_offers_promotions_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'BOGO, discounts, free items and time offers'**
+  String get settings_offers_promotions_subtitle;
+
+  /// No description provided for @settings_search_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
+  String get settings_search_hint;
+
+  /// No description provided for @settings_no_results.
+  ///
+  /// In en, this message translates to:
+  /// **'No settings match your search'**
+  String get settings_no_results;
+
+  /// No description provided for @settings_back_to_categories.
+  ///
+  /// In en, this message translates to:
+  /// **'All settings'**
+  String get settings_back_to_categories;
+
   /// No description provided for @billing_list_view.
   ///
   /// In en, this message translates to:
@@ -6020,6 +6134,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Purchase order updated'**
   String get po_updated;
+
+  /// No description provided for @po_created.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase order created successfully'**
+  String get po_created;
 
   /// No description provided for @po_cannot_edit.
   ///
@@ -9680,6 +9800,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Available 10am–6pm IST'**
   String get help_support_hours;
+
+  /// No description provided for @settings_section_local_store.
+  ///
+  /// In en, this message translates to:
+  /// **'Local store network'**
+  String get settings_section_local_store;
+
+  /// No description provided for @local_store_host_mode.
+  ///
+  /// In en, this message translates to:
+  /// **'This PC is the store host'**
+  String get local_store_host_mode;
+
+  /// No description provided for @local_store_host_mode_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff phones and other tills connect over the same Wi‑Fi — works without internet'**
+  String get local_store_host_mode_subtitle;
+
+  /// No description provided for @local_store_show_qr.
+  ///
+  /// In en, this message translates to:
+  /// **'Show join QR & status'**
+  String get local_store_show_qr;
+
+  /// No description provided for @local_store_show_qr_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share the QR so waiters can join this host'**
+  String get local_store_show_qr_subtitle;
+
+  /// No description provided for @local_store_join_other.
+  ///
+  /// In en, this message translates to:
+  /// **'Join another store host'**
+  String get local_store_join_other;
+
+  /// No description provided for @local_store_join_other_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this PC as a staff / secondary till — enter the host join code only'**
+  String get local_store_join_other_subtitle;
+
+  /// No description provided for @local_store_leave_host.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave joined host'**
+  String get local_store_leave_host;
+
+  /// No description provided for @local_store_leave_host_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop using the remote store host'**
+  String get local_store_leave_host_subtitle;
+
+  /// No description provided for @local_store_joined_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined host: {name}'**
+  String local_store_joined_status(String name);
+
+  /// No description provided for @local_store_host_screen_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Store host (LAN)'**
+  String get local_store_host_screen_title;
+
+  /// No description provided for @local_store_scan_qr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan this QR on staff devices'**
+  String get local_store_scan_qr;
+
+  /// No description provided for @local_store_same_wifi_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Same Wi‑Fi as this PC. Internet is not required.'**
+  String get local_store_same_wifi_hint;
+
+  /// No description provided for @local_store_join_code.
+  ///
+  /// In en, this message translates to:
+  /// **'Join code'**
+  String get local_store_join_code;
+
+  /// No description provided for @local_store_copy_link.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy join link'**
+  String get local_store_copy_link;
+
+  /// No description provided for @local_store_link_copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Join link copied'**
+  String get local_store_link_copied;
+
+  /// No description provided for @local_store_new_code.
+  ///
+  /// In en, this message translates to:
+  /// **'New code'**
+  String get local_store_new_code;
+
+  /// No description provided for @local_store_code_regenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Join code regenerated — staff must re-join'**
+  String get local_store_code_regenerated;
+
+  /// No description provided for @local_store_start_host.
+  ///
+  /// In en, this message translates to:
+  /// **'Start host'**
+  String get local_store_start_host;
+
+  /// No description provided for @local_store_stop_host.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop host'**
+  String get local_store_stop_host;
+
+  /// No description provided for @local_store_host_running.
+  ///
+  /// In en, this message translates to:
+  /// **'Host running · {count} staff connected'**
+  String local_store_host_running(int count);
+
+  /// No description provided for @local_store_host_stopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Host is stopped'**
+  String get local_store_host_stopped;
+
+  /// No description provided for @local_store_host_howto.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Keep this PC on during service.\n2. Connect staff phones / tills to the same Wi‑Fi (disable guest / client isolation).\n3. Allow Windows Firewall for BillKaro when prompted.\n4. Staff open BillKaro → Join store host → enter this join code.'**
+  String get local_store_host_howto;
+
+  /// No description provided for @local_store_join_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Join using code'**
+  String get local_store_join_title;
+
+  /// No description provided for @local_store_join_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the join code shown on the store host PC. Same Wi‑Fi required.'**
+  String get local_store_join_subtitle;
+
+  /// No description provided for @local_store_paste_link.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste join link'**
+  String get local_store_paste_link;
+
+  /// No description provided for @local_store_host_ip.
+  ///
+  /// In en, this message translates to:
+  /// **'Host IP'**
+  String get local_store_host_ip;
+
+  /// No description provided for @local_store_port.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get local_store_port;
+
+  /// No description provided for @local_store_join_action.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get local_store_join_action;
+
+  /// No description provided for @local_store_join_fields_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Join code is required'**
+  String get local_store_join_fields_required;
+
+  /// No description provided for @local_store_join_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not join host'**
+  String get local_store_join_failed;
+
+  /// No description provided for @local_store_joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined {name}'**
+  String local_store_joined(String name);
+
+  /// No description provided for @local_store_left_host.
+  ///
+  /// In en, this message translates to:
+  /// **'Left the store host'**
+  String get local_store_left_host;
+
+  /// No description provided for @local_store_host_started.
+  ///
+  /// In en, this message translates to:
+  /// **'Store host started on this PC'**
+  String get local_store_host_started;
+
+  /// No description provided for @local_store_host_stopped_toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Store host stopped'**
+  String get local_store_host_stopped_toast;
+
+  /// No description provided for @local_store_joined_staff_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined staff'**
+  String get local_store_joined_staff_title;
+
+  /// No description provided for @local_store_joined_staff_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No staff joined yet. Share the join code or QR.'**
+  String get local_store_joined_staff_empty;
+
+  /// No description provided for @local_store_joined_via_code.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined via code'**
+  String get local_store_joined_via_code;
+
+  /// No description provided for @local_store_joined_via_qr.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined via QR'**
+  String get local_store_joined_via_qr;
+
+  /// No description provided for @local_store_remove_staff.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get local_store_remove_staff;
 }
 
 class _AppLocalizationsDelegate

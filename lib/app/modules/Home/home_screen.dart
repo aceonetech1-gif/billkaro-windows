@@ -643,13 +643,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   'onTap': () =>
                       Modular.to.pushNamed(HomeMainRoutes.stockSummary),
                 },
-              if (StaffAccess.canShowCreateOrder)
-                {
-                  'icon': Icons.point_of_sale_outlined,
-                  'label': loc.create_order,
-                  'onTap': () =>
-                      Modular.to.navigate(HomeMainRoutes.createOrder),
-                },
               if (showTables && StaffAccess.canAccessTables)
                 {
                   'icon': Icons.table_restaurant_outlined,
@@ -705,49 +698,58 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
             ];
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: actions.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isDesktop ? 5 : (Get.width >= 480 ? 4 : 2),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isDesktop
-                    ? 1.4
-                    : (Get.width >= 480 ? 1.2 : 1.6),
-              ),
-              itemBuilder: (context, index) {
-                final item = actions[index];
-                final label = item['label'] as String;
-                GlobalKey? showcaseKey;
-                String? showcaseDescription;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (StaffAccess.canShowCreateOrder) ...[
+                  _createOrderQuickAction(loc),
+                  const SizedBox(height: 12),
+                ],
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: actions.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isDesktop ? 5 : (Get.width >= 480 ? 4 : 2),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: isDesktop
+                        ? 1.4
+                        : (Get.width >= 480 ? 1.2 : 1.6),
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = actions[index];
+                    final label = item['label'] as String;
+                    GlobalKey? showcaseKey;
+                    String? showcaseDescription;
 
-                // Assign showcase keys based on label
-                if (label == loc.closedOrders) {
-                  showcaseKey = showcaseController.closedOrdersKey;
-                  showcaseDescription = loc.home_showcase_closed_orders;
-                } else if (label == loc.onHoldOrders) {
-                  showcaseKey = showcaseController.holdOrdersKey;
-                  showcaseDescription = loc.home_showcase_hold_orders;
-                } else if (label == loc.addItems) {
-                  showcaseKey = showcaseController.addItemsKey;
-                  showcaseDescription = loc.home_showcase_add_items;
-                } else if (label == loc.kot_history) {
-                  showcaseKey = showcaseController.kotHistoryKey;
-                  showcaseDescription = loc.home_showcase_kot_history;
-                }
+                    // Assign showcase keys based on label
+                    if (label == loc.closedOrders) {
+                      showcaseKey = showcaseController.closedOrdersKey;
+                      showcaseDescription = loc.home_showcase_closed_orders;
+                    } else if (label == loc.onHoldOrders) {
+                      showcaseKey = showcaseController.holdOrdersKey;
+                      showcaseDescription = loc.home_showcase_hold_orders;
+                    } else if (label == loc.addItems) {
+                      showcaseKey = showcaseController.addItemsKey;
+                      showcaseDescription = loc.home_showcase_add_items;
+                    } else if (label == loc.kot_history) {
+                      showcaseKey = showcaseController.kotHistoryKey;
+                      showcaseDescription = loc.home_showcase_kot_history;
+                    }
 
-                return _buildQuickActionCard(
-                  loc: loc,
-                  icon: item['icon'] as IconData,
-                  label: label,
-                  onTap: item['onTap'] as VoidCallback,
-                  iconWidget: item['iconWidget'] as Widget?,
-                  showcaseKey: showcaseKey,
-                  showcaseDescription: showcaseDescription,
-                );
-              },
+                    return _buildQuickActionCard(
+                      loc: loc,
+                      icon: item['icon'] as IconData,
+                      label: label,
+                      onTap: item['onTap'] as VoidCallback,
+                      iconWidget: item['iconWidget'] as Widget?,
+                      showcaseKey: showcaseKey,
+                      showcaseDescription: showcaseDescription,
+                    );
+                  },
+                ),
+              ],
             );
           }),
         ),
@@ -973,6 +975,64 @@ class _HomeScreenState extends State<HomeScreen> {
     final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
+  }
+
+  Widget _createOrderQuickAction(AppLocalizations loc) {
+    return _GlassContainer(
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(_cardRadius),
+          onTap: () => Modular.to.navigate(HomeMainRoutes.createOrder),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(_cardRadius),
+              border: Border(
+                left: BorderSide(
+                  color: AppColor.secondaryPrimary,
+                  width: 4,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColor.secondaryPrimary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.point_of_sale_outlined,
+                    color: AppColor.secondaryPrimary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    loc.create_order,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColor.textPrimary,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppColor.secondaryPrimary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildQuickActionCard({

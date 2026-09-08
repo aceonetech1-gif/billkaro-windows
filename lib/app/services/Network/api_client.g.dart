@@ -2941,9 +2941,13 @@ class _ApiClient implements ApiClient {
     String outletId,
     String itemId,
     String? type,
+    String? variantId,
   ) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'type': type};
+    final queryParameters = <String, dynamic>{
+      r'type': type,
+      r'variantId': variantId,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;

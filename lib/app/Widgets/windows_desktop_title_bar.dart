@@ -22,7 +22,7 @@ class WindowsDesktopTitleBar extends StatelessWidget {
   const WindowsDesktopTitleBar({
     super.key,
     this.actions,
-    this.title = 'Billkaro ChillKaro',
+    this.title = 'Billkro ChillKro',
     this.confirmOnClose = true,
     this.onBeforeClose,
   });

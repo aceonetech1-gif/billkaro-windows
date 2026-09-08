@@ -30,6 +30,7 @@ class AppPref {
   static const String keyDownloadPath = 'download_path';
   static const String keyQrMenuBaseUrl = 'qr_menu_base_url';
   static const String keyAutoSyncEnabled = 'auto_sync_enabled';
+  static const String keyOfflineModeEnabled = 'offline_mode_enabled';
   static const String keyCashDrawerEnabled = 'cash_drawer_enabled';
   static const String keyOpenCashDrawerOnCashPayment =
       'open_cash_drawer_on_cash_payment';
@@ -48,6 +49,16 @@ class AppPref {
   static const String keyBillingAccessModePrefix = 'billing_access_mode_';
   static const String keyPendingPlatformFeeOrderIds =
       'pending_platform_fee_order_ids';
+
+  /// LAN store host (Petpooja-style offline Wi‑Fi server on this PC).
+  static const String keyLocalStoreHostEnabled = 'local_store_host_enabled';
+  static const String keyLocalStorePort = 'local_store_port';
+  static const String keyLocalStoreJoinToken = 'local_store_join_token';
+  static const String keyLocalStoreClientBaseUrl = 'local_store_client_base_url';
+  static const String keyLocalStoreClientToken = 'local_store_client_token';
+  static const String keyLocalStoreClientOutletName =
+      'local_store_client_outlet_name';
+  static const String keyLocalStoreDeviceId = 'local_store_device_id';
 
   AppPref(this._preferences);
 
@@ -215,6 +226,63 @@ class AppPref {
   bool get autoSyncEnabled => _preferences.getBool(keyAutoSyncEnabled) ?? true;
   set autoSyncEnabled(bool value) =>
       _preferences.setBool(keyAutoSyncEnabled, value);
+
+  /// Allow creating/saving orders when internet is unavailable.
+  bool get offlineModeEnabled =>
+      _preferences.getBool(keyOfflineModeEnabled) ?? true;
+  set offlineModeEnabled(bool value) =>
+      _preferences.setBool(keyOfflineModeEnabled, value);
+
+  /// This PC acts as the in-store LAN host for staff devices.
+  bool get localStoreHostEnabled =>
+      _preferences.getBool(keyLocalStoreHostEnabled) ?? false;
+  set localStoreHostEnabled(bool value) =>
+      _preferences.setBool(keyLocalStoreHostEnabled, value);
+
+  int get localStorePort =>
+      _preferences.getInt(keyLocalStorePort) ?? 47831;
+  set localStorePort(int value) =>
+      _preferences.setInt(keyLocalStorePort, value);
+
+  String get localStoreJoinToken =>
+      _preferences.getString(keyLocalStoreJoinToken) ?? '';
+  set localStoreJoinToken(String value) =>
+      _preferences.setString(keyLocalStoreJoinToken, value);
+
+  /// Secondary till / waiter PC joined to another host on the same Wi‑Fi.
+  String get localStoreClientBaseUrl =>
+      _preferences.getString(keyLocalStoreClientBaseUrl) ?? '';
+  set localStoreClientBaseUrl(String value) =>
+      _preferences.setString(keyLocalStoreClientBaseUrl, value.trim());
+
+  String get localStoreClientToken =>
+      _preferences.getString(keyLocalStoreClientToken) ?? '';
+  set localStoreClientToken(String value) =>
+      _preferences.setString(keyLocalStoreClientToken, value.trim());
+
+  String get localStoreClientOutletName =>
+      _preferences.getString(keyLocalStoreClientOutletName) ?? '';
+  set localStoreClientOutletName(String value) =>
+      _preferences.setString(keyLocalStoreClientOutletName, value.trim());
+
+  bool get localStoreClientJoined =>
+      localStoreClientBaseUrl.isNotEmpty && localStoreClientToken.isNotEmpty;
+
+  String get localStoreDeviceId {
+    var id = _preferences.getString(keyLocalStoreDeviceId) ?? '';
+    if (id.isEmpty) {
+      id =
+          'dev_${DateTime.now().millisecondsSinceEpoch}_${identityHashCode(this)}';
+      _preferences.setString(keyLocalStoreDeviceId, id);
+    }
+    return id;
+  }
+
+  void clearLocalStoreClient() {
+    _preferences.remove(keyLocalStoreClientBaseUrl);
+    _preferences.remove(keyLocalStoreClientToken);
+    _preferences.remove(keyLocalStoreClientOutletName);
+  }
 
   /// 👉 RJ11 cash drawer connected to bill printer DK port
   bool get cashDrawerEnabled =>

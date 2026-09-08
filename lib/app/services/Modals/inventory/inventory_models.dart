@@ -707,6 +707,22 @@ class ProductStockData {
 
   double get total => amount + taxAmount;
 
+  /// Parent menu item id (path param for stock APIs).
+  String get menuItemId {
+    final parent = itemId?.trim();
+    if (parent != null && parent.isNotEmpty) return parent;
+    return id;
+  }
+
+  /// Variant id when this row is variant-level stock; otherwise null.
+  String? get stockVariantId {
+    final v = variantId?.trim();
+    if (v != null && v.isNotEmpty) return v;
+    final parent = itemId?.trim();
+    if (parent != null && parent.isNotEmpty && parent != id) return id;
+    return null;
+  }
+
   factory ProductStockData.fromJson(Map<String, dynamic> json) {
     final stock = (json['stockQuantity'] as num?)?.toDouble() ?? 0;
     final min = (json['minStock'] as num?)?.toDouble() ?? 0;

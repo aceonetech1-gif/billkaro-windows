@@ -641,7 +641,7 @@ extension _InventoryProductStockTab on _InventoryHubScreenState {
         } else if (value == 'delete') {
           _confirmDelete(
             item.itemName,
-            () => controller.deleteProductStock(item.id),
+            () => controller.deleteProductStock(item),
             loc,
           );
         }

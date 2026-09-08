@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
+import 'package:billkaro/app/services/sync/bill_number_allocator.dart';
+import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/app/services/sync/promotion_sync.dart';
@@ -88,6 +90,10 @@ class Synchronisation {
         );
       }
 
+      // Staff tills joined to a LAN host must not upload orders — host is SoT.
+      final joinedHost =
+          appPref.localStoreClientJoined && !appPref.localStoreHostEnabled;
+
       if (fromReconnect) {
         await _requeueFailedWork(db);
       }
@@ -99,7 +105,14 @@ class Synchronisation {
       }
 
       // Fetch orders after item push so remapped server item IDs are used.
-      final pendingOrders = await db.getPendingOrders();
+      final pendingOrders = joinedHost
+          ? <OrderModel>[]
+          : await db.getPendingOrders();
+      if (joinedHost) {
+        debugPrint(
+          'ℹ️ [SYNC] Joined to store host — skipping order push (host syncs)',
+        );
+      }
       debugPrint(
         '📦 [SYNC] ${pendingOrders.length} pending order(s), '
         '${itemResult.pending} pending item(s)',
@@ -313,6 +326,13 @@ class Synchronisation {
         serverOrder.outletId,
         isSyncedFromApi: true,
         protectUnsynced: false,
+      );
+    }
+
+    if (Get.isRegistered<AppPref>() && serverOrder.billNumber.trim().isNotEmpty) {
+      syncLocalOutletBillNumber(Get.find<AppPref>(), serverOrder.billNumber);
+      await BillNumberAllocator.instance.reconcileFromIssued(
+        serverOrder.billNumber,
       );
     }
   }

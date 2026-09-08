@@ -31,10 +31,9 @@ Future<void> showAddProductStockDrawer(InventoryController controller) async {
     await controller.loadMenuItems();
   }
   if (controller.menuItems.isEmpty) {
-    Get.snackbar(
-      'No menu items',
-      'Create a menu item first, then Add Item Stock here.',
-      snackPosition: SnackPosition.BOTTOM,
+    showError(
+      title: 'No menu items',
+      description: 'Create a menu item first, then Add Item Stock here.',
     );
     return;
   }
@@ -310,13 +309,7 @@ Future<void> showAddProductStockDrawer(InventoryController controller) async {
                   saving.value = false;
                   if (ok) {
                     Get.back();
-                    Get.snackbar(
-                      'Stock added',
-                      'Item Stock updated successfully',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: const Color(0xFF16A34A),
-                      colorText: Colors.white,
-                    );
+                    showSuccess(description: 'Item Stock updated successfully');
                   }
                 },
           style: ElevatedButton.styleFrom(
@@ -560,7 +553,8 @@ Future<void> showEditProductStockDrawer(
                   final category = selectedCategory?.trim() ?? '';
                   saving.value = true;
                   final ok = await controller.adjustProductStock(
-                    itemId: item.id,
+                    itemId: item.menuItemId,
+                    variantId: item.stockVariantId,
                     adjustmentType: 'ADJUSTMENT',
                     quantity: qty,
                     reason: 'Other',
@@ -583,13 +577,7 @@ Future<void> showEditProductStockDrawer(
                   saving.value = false;
                   if (ok) {
                     Get.back();
-                    Get.snackbar(
-                      'Stock updated',
-                      'Item Stock updated successfully',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: const Color(0xFF16A34A),
-                      colorText: Colors.white,
-                    );
+                    showSuccess(description: 'Item Stock updated successfully');
                   }
                 },
           style: ElevatedButton.styleFrom(
@@ -1120,7 +1108,8 @@ Future<void> showAdjustProductStockDialog(
                                   return;
                                 saving.value = true;
                                 final ok = await controller.adjustProductStock(
-                                  itemId: item.id,
+                                  itemId: item.menuItemId,
+                                  variantId: item.stockVariantId,
                                   adjustmentType: adjustmentType.value,
                                   quantity: qty,
                                   reason: reason.value,
@@ -1183,8 +1172,9 @@ Future<void> showProductStockMovementsDialog(
   Future<void> load() async {
     loading.value = true;
     movements.value = await controller.loadProductStockMovements(
-      itemId: item.id,
+      itemId: item.menuItemId,
       type: filter.value,
+      variantId: item.stockVariantId,
     );
     final match = controller.productStock.firstWhereOrNull(
       (e) => e.id == item.id,

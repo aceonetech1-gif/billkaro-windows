@@ -15,6 +15,37 @@ import 'package:intl/intl.dart';
 import 'dart:math' as math;
 
 const _poAccent = Color(0xFFEF8819);
+
+String _normalizePoPhone(String? raw) {
+  final digits = (raw ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.length >= 10) return digits.substring(digits.length - 10);
+  return digits;
+}
+
+String _normalizePoPin(String? raw) {
+  final pin = (raw ?? '').replaceAll(RegExp(r'\D'), '');
+  return pin.length == 6 ? pin : '';
+}
+
+void _applyMaterialToLine(_PoLineDraft line, RawMaterialData material) {
+  line.rawMaterialId = material.id;
+  line.materialNameCtrl.text = material.name;
+  if (line.priceCtrl.text.isEmpty) {
+    line.priceCtrl.text = _PoLineDraft._num(material.purchasePrice);
+  }
+  if (line.hsnSacCtrl.text.isEmpty && material.hsnSacCode.isNotEmpty) {
+    line.hsnSacCtrl.text = material.hsnSacCode;
+  }
+  if (line.descriptionCtrl.text.trim().isEmpty) {
+    line.descriptionCtrl.text = material.name;
+  }
+  if (line.taxRateCtrl.text.trim().isEmpty) {
+    line.taxRateCtrl.text = _PoLineDraft._num(material.taxRate);
+  }
+  if (line.stockCtrl.text.trim().isEmpty) {
+    line.stockCtrl.text = _PoLineDraft._num(material.currentStock);
+  }
+}
 const _poBg = Color(0xFFF3F5F9);
 const _poInk = Color(0xFF111827);
 const _poMuted = Color(0xFF6B7280);
@@ -834,9 +865,9 @@ class _PoAddressFields {
       name: outlet?.businessName ?? '',
       line1: parts.line1,
       line2: parts.line2,
-      pinCode: parts.pinCode,
+      pinCode: _normalizePoPin(parts.pinCode),
       state: parts.state,
-      contact: outlet?.phoneNumber ?? '',
+      contact: _normalizePoPhone(outlet?.phoneNumber),
       gst: outlet?.gstinNumber ?? '',
     );
   }
@@ -1067,7 +1098,10 @@ Future<void> showCreatePurchaseOrderDialog(
         final isDraftSave = status == 'DRAFT' && editPo == null;
 
         if (!isDraftSave) {
-          if (!(formKey.currentState?.validate() ?? false)) return;
+          if (!(formKey.currentState?.validate() ?? false)) {
+            showError(description: loc.please_complete_address_fields);
+            return;
+          }
           if (supplierId.isEmpty) {
             showError(description: loc.select_supplier_required);
             return;
@@ -1091,7 +1125,10 @@ Future<void> showCreatePurchaseOrderDialog(
             // Draft: keep only complete resolvable lines; ignore partial ones.
             if (material == null || qty == null || price == null) continue;
           } else {
-            if (qty == null || price == null) continue;
+            if (qty == null || price == null) {
+              showError(description: loc.po_line_invalid);
+              return;
+            }
             if (material == null) {
               showError(description: loc.po_line_material_required);
               return;
@@ -1181,8 +1218,12 @@ Future<void> showCreatePurchaseOrderDialog(
             showSuccess(description: loc.po_updated);
           } else if (status == 'DRAFT') {
             showSuccess(description: loc.po_draft_saved);
+          } else {
+            showSuccess(description: loc.po_created);
           }
           closePoForm();
+        } else if (!isDraftSave) {
+          showError(description: loc.outlet_or_user_info_missing);
         }
       }
 
@@ -1529,70 +1570,41 @@ Future<void> showCreatePurchaseOrderDialog(
                                           CrossAxisAlignment.start,
                                       children: [
                                         _poLineFieldLabel(loc.material_column),
-                                        TextFormField(
-                                          controller: line.materialNameCtrl,
+                                        AppDropdownFormField2<String>(
+                                          value: line.rawMaterialId.isEmpty
+                                              ? null
+                                              : line.rawMaterialId,
                                           decoration: _poLineFieldDecoration(
-                                            hint: 'Material name',
+                                            hint: loc.material_column,
                                           ),
+                                          items: c.rawMaterials
+                                              .map(
+                                                (m) => DropdownItem(
+                                                  value: m.id,
+                                                  child: Text(m.name),
+                                                ),
+                                              )
+                                              .toList(),
                                           validator: (v) {
                                             if (!_poLineIsActive(line)) {
                                               return null;
                                             }
-                                            if ((v ?? '').trim().isEmpty) {
+                                            if ((v ?? '').isEmpty) {
                                               return loc
                                                   .po_line_material_required;
                                             }
                                             return null;
                                           },
-                                          onChanged: (v) {
+                                          onChanged: (id) {
                                             final m = c.rawMaterials
                                                 .firstWhereOrNull(
-                                                  (x) =>
-                                                      x.name.toLowerCase() ==
-                                                      v.trim().toLowerCase(),
+                                                  (x) => x.id == id,
                                                 );
                                             setState(() {
-                                              line.rawMaterialId = m?.id ?? '';
                                               if (m != null) {
-                                                if (line
-                                                    .priceCtrl
-                                                    .text
-                                                    .isEmpty) {
-                                                  line.priceCtrl.text =
-                                                      _PoLineDraft._num(
-                                                        m.purchasePrice,
-                                                      );
-                                                }
-                                                if (line
-                                                        .hsnSacCtrl
-                                                        .text
-                                                        .isEmpty &&
-                                                    m.hsnSacCode.isNotEmpty) {
-                                                  line.hsnSacCtrl.text =
-                                                      m.hsnSacCode;
-                                                }
-                                                if (line.descriptionCtrl.text
-                                                    .trim()
-                                                    .isEmpty) {
-                                                  line.descriptionCtrl.text =
-                                                      m.name;
-                                                }
-                                                if (line.taxRateCtrl.text
-                                                    .trim()
-                                                    .isEmpty) {
-                                                  line.taxRateCtrl.text =
-                                                      _PoLineDraft._num(
-                                                        m.taxRate,
-                                                      );
-                                                }
-                                                if (line.stockCtrl.text
-                                                    .trim()
-                                                    .isEmpty) {
-                                                  line.stockCtrl.text =
-                                                      _PoLineDraft._num(
-                                                        m.currentStock,
-                                                      );
-                                                }
+                                                _applyMaterialToLine(line, m);
+                                              } else {
+                                                line.rawMaterialId = '';
                                               }
                                             });
                                           },
@@ -2673,13 +2685,12 @@ Widget _buildPoAddressForm(
             child: field(
               fields.pinCtrl,
               loc.po_pin_code,
-              required: true,
               keyboardType: TextInputType.number,
               maxLength: 6,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (v) {
                 final pin = (v ?? '').trim();
-                if (pin.isEmpty) return loc.po_pin_code_required;
+                if (pin.isEmpty) return null;
                 if (pin.length != 6 || !RegExp(r'^\d{6}$').hasMatch(pin)) {
                   return loc.please_enter_valid_pincode;
                 }
@@ -2707,13 +2718,12 @@ Widget _buildPoAddressForm(
             child: field(
               fields.contactCtrl,
               loc.po_contact_no,
-              required: true,
               keyboardType: TextInputType.phone,
               maxLength: 10,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (v) {
                 final phone = (v ?? '').trim();
-                if (phone.isEmpty) return loc.please_enter_phone_number;
+                if (phone.isEmpty) return null;
                 if (phone.length != 10) {
                   return loc.please_enter_valid_10_digit_phone;
                 }

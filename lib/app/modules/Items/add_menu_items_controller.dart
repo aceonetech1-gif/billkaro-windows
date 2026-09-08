@@ -405,32 +405,32 @@ class AddMenuItemController extends BaseController {
               const SizedBox(height: 8),
               const Divider(height: 1),
               const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColor.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    color: AppColor.primary,
-                    size: 24,
-                  ),
-                ),
-                title: const Text(
-                  'Generate with AI',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                subtitle: const Text(
-                  'Generate a menu item image using AI',
-                  style: TextStyle(fontSize: 13),
-                ),
-                onTap: () {
-                  Get.back();
-                  onGenerateWithAI();
-                },
-              ),
+              // ListTile(
+              //   leading: Container(
+              //     padding: const EdgeInsets.all(8),
+              //     decoration: BoxDecoration(
+              //       color: AppColor.primary.withOpacity(0.1),
+              //       borderRadius: BorderRadius.circular(8),
+              //     ),
+              //     child: Icon(
+              //       Icons.auto_awesome,
+              //       color: AppColor.primary,
+              //       size: 24,
+              //     ),
+              //   ),
+              //   title: const Text(
+              //     'Generate with AI',
+              //     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              //   ),
+              //   subtitle: const Text(
+              //     'Generate a menu item image using AI',
+              //     style: TextStyle(fontSize: 13),
+              //   ),
+              //   onTap: () {
+              //     Get.back();
+              //     onGenerateWithAI();
+              //   },
+              // ),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
@@ -553,32 +553,32 @@ class AddMenuItemController extends BaseController {
                   ],
                 ),
                 const SizedBox(height: 8),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColor.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: AppColor.primary,
-                      size: 24,
-                    ),
-                  ),
-                  title: const Text(
-                    'Generate with AI',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: const Text(
-                    'Generate a menu item image using AI',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  onTap: () {
-                    Get.back();
-                    onGenerateWithAI();
-                  },
-                ),
+                // ListTile(
+                //   leading: Container(
+                //     padding: const EdgeInsets.all(8),
+                //     decoration: BoxDecoration(
+                //       color: AppColor.primary.withOpacity(0.1),
+                //       borderRadius: BorderRadius.circular(8),
+                //     ),
+                //     child: Icon(
+                //       Icons.auto_awesome,
+                //       color: AppColor.primary,
+                //       size: 24,
+                //     ),
+                //   ),
+                //   title: const Text(
+                //     'Generate with AI',
+                //     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                //   ),
+                //   subtitle: const Text(
+                //     'Generate a menu item image using AI',
+                //     style: TextStyle(fontSize: 13),
+                //   ),
+                //   onTap: () {
+                //     Get.back();
+                //     onGenerateWithAI();
+                //   },
+                // ),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(8),

@@ -677,6 +677,7 @@ abstract class ApiClient {
     @Path('outletId') String outletId,
     @Path('itemId') String itemId,
     @Query('type') String? type,
+    @Query('variantId') String? variantId,
   );
 
   // -------------------- STORE DAY SESSIONS --------------------

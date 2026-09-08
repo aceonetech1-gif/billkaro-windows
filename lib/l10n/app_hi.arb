@@ -92,6 +92,9 @@
   "manage_your_loyal_customers": "अपने वफादार ग्राहकों को प्रबंधित करें",
   "send_bulk_messages": "बुल्क मैसेज भेजें",
   "sync_across_multiple_devices": "कई डिवाइस पर सिंक करें",
+  "offline_mode": "ऑफ़लाइन मोड",
+  "offline_mode_subtitle": "इंटरनेट न होने पर भी ऑर्डर सेव करने की अनुमति दें",
+  "offline_mode_disabled": "ऑफ़लाइन मोड बंद है। जारी रखने के लिए इंटरनेट से जुड़ें।",
   "add_and_manage_staff_members": "स्टाफ सदस्यों को जोड़ें और प्रबंधित करें",
   "configure_printer_settings": "प्रिंटर सेटिंग्स कॉन्फ़िगर करें",
   "change_app_language": "ऐप भाषा बदलें",
@@ -874,6 +877,22 @@
   "discard_order_message": "आपके पास असहेजे ऑर्डर परिवर्तन हैं। क्या आप वाकई इस स्क्रीन को छोड़ना चाहते हैं?",
   "no_permission_section": "आपके पास इस अनुभाग तक पहुँचने की अनुमति नहीं है।",
   "settings_section_general": "सामान्य",
+  "settings_section_orders_billing": "ऑर्डर और बिलिंग",
+  "settings_section_orders_billing_desc": "बिल QR, ऑर्डर विवरण, ऑफ़र और डाउनलोड",
+  "settings_section_hardware": "हार्डवेयर और किचन",
+  "settings_section_hardware_desc": "कैश ड्रॉअर, KOT और किचन डिस्प्ले",
+  "settings_section_sync_devices": "सिंक और डिवाइस",
+  "settings_section_sync_devices_desc": "ऑफ़लाइन मोड, मल्टी-डिवाइस सिंक और लोकल नेटवर्क",
+  "settings_section_appearance_language": "दिखावट और भाषा",
+  "settings_section_appearance_language_desc": "थीम रंग और ऐप भाषा",
+  "settings_section_notifications_desc": "अलर्ट और सूचना इतिहास",
+  "settings_section_billing_desc": "इस आउटलेट के लिए सब्सक्रिप्शन या वॉलेट एक्सेस",
+  "settings_section_help_desc": "गाइड, सेटअप टिप्स और सहायता",
+  "settings_offers_promotions": "ऑफ़र और प्रमोशन",
+  "settings_offers_promotions_subtitle": "BOGO, छूट, मुफ़्त आइटम और समय आधारित ऑफ़र",
+  "settings_search_hint": "सेटिंग्स खोजें",
+  "settings_no_results": "आपकी खोज से कोई सेटिंग नहीं मिली",
+  "settings_back_to_categories": "सभी सेटिंग्स",
   "billing_list_view": "बिलिंग सूची दृश्य",
   "billing_list_view_subtitle": "ऑर्डर को छवि ग्रिड के बजाय सूची में दिखाएं",
   "show_qr_on_bill": "बिल पर QR दिखाएं",
@@ -1604,6 +1623,7 @@
   "edit_po": "PO संपादित करें",
   "save_po_changes": "परिवर्तन सहेजें",
   "po_updated": "खरीद ऑर्डर अपडेट हो गया",
+  "po_created": "खरीद ऑर्डर सफलतापूर्वक बनाया गया",
   "po_cannot_edit": "केवल लंबित खरीद ऑर्डर संपादित किए जा सकते हैं",
   "generate_po_from_low_stock": "कम स्टॉक से PO बनाएं",
   "po_header_section": "ऑर्डर विवरण",
@@ -2540,6 +2560,62 @@
   "help_call_us": "कॉल करें",
   "help_whatsapp": "WhatsApp",
   "help_live_chat": "लाइव चैट",
-  "help_support_hours": "उपलब्ध सुबह 10 बजे–शाम 6 बजे IST"
+  "help_support_hours": "उपलब्ध सुबह 10 बजे–शाम 6 बजे IST",
+
+  "settings_section_local_store": "लोकल स्टोर नेटवर्क",
+  "local_store_host_mode": "यह PC स्टोर होस्ट है",
+  "local_store_host_mode_subtitle": "स्टाफ फ़ोन और अन्य टिल उसी Wi‑Fi पर जुड़ते हैं — इंटरनेट की ज़रूरत नहीं",
+  "local_store_show_qr": "जॉइन QR और स्थिति दिखाएँ",
+  "local_store_show_qr_subtitle": "वेटर जॉइन कर सकें, इसके लिए QR शेयर करें",
+  "local_store_join_other": "दूसरे स्टोर होस्ट से जुड़ें",
+  "local_store_join_other_subtitle": "इस PC को स्टाफ / सेकेंडरी टिल की तरह इस्तेमाल करें — केवल होस्ट जॉइन कोड डालें",
+  "local_store_leave_host": "जुड़े होस्ट को छोड़ें",
+  "local_store_leave_host_subtitle": "रिमोट स्टोर होस्ट का उपयोग बंद करें",
+  "local_store_joined_status": "होस्ट से जुड़े: {name}",
+  "@local_store_joined_status": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "local_store_host_screen_title": "स्टोर होस्ट (LAN)",
+  "local_store_scan_qr": "स्टाफ डिवाइस पर यह QR स्कैन करें",
+  "local_store_same_wifi_hint": "इसी PC जैसा Wi‑Fi। इंटरनेट ज़रूरी नहीं।",
+  "local_store_join_code": "जॉइन कोड",
+  "local_store_copy_link": "जॉइन लिंक कॉपी करें",
+  "local_store_link_copied": "जॉइन लिंक कॉपी हो गया",
+  "local_store_new_code": "नया कोड",
+  "local_store_code_regenerated": "जॉइन कोड नया बना — स्टाफ को फिर से जुड़ना होगा",
+  "local_store_start_host": "होस्ट शुरू करें",
+  "local_store_stop_host": "होस्ट बंद करें",
+  "local_store_host_running": "होस्ट चल रहा है · {count} स्टाफ जुड़े",
+  "@local_store_host_running": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "local_store_host_stopped": "होस्ट बंद है",
+  "local_store_host_howto": "1. सेवा के दौरान यह PC चालू रखें।\n2. स्टाफ फ़ोन/टिल उसी Wi‑Fi पर हों (गेस्ट / क्लाइंट आइसोलेशन बंद)।\n3. Windows Firewall में BillKaro को अनुमति दें।\n4. स्टाफ: BillKaro → Join store host → यही जॉइन कोड डालें।",
+  "local_store_join_title": "कोड से जुड़ें",
+  "local_store_join_subtitle": "स्टोर होस्ट PC पर दिखाया जॉइन कोड डालें। उसी Wi‑Fi पर होना ज़रूरी है।",
+  "local_store_paste_link": "जॉइन लिंक पेस्ट करें",
+  "local_store_host_ip": "होस्ट IP",
+  "local_store_port": "पोर्ट",
+  "local_store_join_action": "जुड़ें",
+  "local_store_join_fields_required": "जॉइन कोड ज़रूरी है",
+  "local_store_join_failed": "होस्ट से नहीं जुड़ सके",
+  "local_store_joined": "{name} से जुड़ गए",
+  "@local_store_joined": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "local_store_left_host": "स्टोर होस्ट छोड़ दिया",
+  "local_store_host_started": "इस PC पर स्टोर होस्ट शुरू हो गया",
+  "local_store_host_stopped_toast": "स्टोर होस्ट बंद हो गया",
+  "local_store_joined_staff_title": "जुड़े स्टाफ",
+  "local_store_joined_staff_empty": "अभी कोई स्टाफ नहीं जुड़ा। जॉइन कोड या QR शेयर करें।",
+  "local_store_joined_via_code": "कोड से जुड़े",
+  "local_store_joined_via_qr": "QR से जुड़े",
+  "local_store_remove_staff": "हटाएँ"
 
 }

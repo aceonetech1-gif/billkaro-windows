@@ -1,10 +1,14 @@
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
+import 'package:billkaro/app/modules/LocalStore/local_store_join_dialog.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
 import 'package:billkaro/app/modules/Shell/Sidebar/app_shell_sidebar_controller.dart';
 import 'package:billkaro/app/services/billing/billing_access_mode.dart';
 import 'package:billkaro/app/services/billing/billing_access_service.dart';
+import 'package:billkaro/app/services/local_store/local_store_host_service.dart';
+import 'package:billkaro/app/services/local_store/local_store_session.dart';
+import 'package:billkaro/app/services/local_store/local_store_staff_session.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/config/config.dart';
@@ -21,6 +25,7 @@ class AppSettingsController extends BaseController {
   RxBool get showAddDetailsOnCreateOrder => _showAddDetailsOnCreateOrder;
   late final RxBool kotModeEnabled;
   late final RxBool autoSyncEnabled;
+  late final RxBool offlineModeEnabled;
   late final RxBool cashDrawerEnabled;
   late final RxBool openCashDrawerOnCashPayment;
   late final RxString cashDrawerPin;
@@ -29,7 +34,18 @@ class AppSettingsController extends BaseController {
   late final Rx<BillingAccessMode> billingAccessMode;
   late final BillingAccessService _billingAccess;
 
+  late final RxBool localStoreHostEnabled;
+  late final RxBool localStoreClientJoined;
+  late final RxString localStoreClientLabel;
+
   bool get canChangeBillingMode => StaffAccess.isOwnerSession;
+
+  LocalStoreHostService get localStoreHost {
+    if (!Get.isRegistered<LocalStoreHostService>()) {
+      Get.put(LocalStoreHostService(), permanent: true);
+    }
+    return Get.find<LocalStoreHostService>();
+  }
 
   @override
   void onInit() {
@@ -41,13 +57,64 @@ class AppSettingsController extends BaseController {
     _showAddDetailsOnCreateOrder = appPref.showAddDetailsOnCreateOrder.obs;
     kotModeEnabled = appPref.isKOT.obs;
     autoSyncEnabled = appPref.autoSyncEnabled.obs;
+    offlineModeEnabled = appPref.offlineModeEnabled.obs;
     cashDrawerEnabled = appPref.cashDrawerEnabled.obs;
     openCashDrawerOnCashPayment = appPref.openCashDrawerOnCashPayment.obs;
     cashDrawerPin = appPref.cashDrawerPin.obs;
     downloadPath = appPref.downloadPath.obs;
     poPrintOrientation = appPref.poPrintOrientation.obs;
     billingAccessMode = _billingAccess.mode.obs;
+    localStoreHostEnabled = appPref.localStoreHostEnabled.obs;
+    localStoreClientJoined = appPref.localStoreClientJoined.obs;
+    localStoreClientLabel = _clientLabel().obs;
     _ensureDefaultDownloadPath();
+  }
+
+  String _clientLabel() {
+    if (!appPref.localStoreClientJoined) return '';
+    final name = appPref.localStoreClientOutletName.trim();
+    if (name.isNotEmpty) return name;
+    return appPref.localStoreClientBaseUrl;
+  }
+
+  void refreshLocalStoreStatus() {
+    localStoreHostEnabled.value = appPref.localStoreHostEnabled;
+    localStoreClientJoined.value = appPref.localStoreClientJoined;
+    localStoreClientLabel.value = _clientLabel();
+  }
+
+  Future<void> setLocalStoreHostEnabled(bool value) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    try {
+      if (value) {
+        await stopLocalStoreLive();
+      }
+      await localStoreHost.setEnabled(value);
+      localStoreHostEnabled.value = value;
+      refreshLocalStoreStatus();
+      showSuccess(
+        description: value
+            ? loc.local_store_host_started
+            : loc.local_store_host_stopped_toast,
+      );
+    } catch (e) {
+      localStoreHostEnabled.value = appPref.localStoreHostEnabled;
+      showError(description: '$e');
+    }
+  }
+
+  Future<void> joinLocalStoreHost() async {
+    final ok = await showLocalStoreJoinDialog();
+    if (ok) refreshLocalStoreStatus();
+  }
+
+  Future<void> leaveLocalStoreHost() async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    await leaveLocalStoreHostOnServer(appPref);
+    await stopLocalStoreLive();
+    appPref.clearLocalStoreClient();
+    refreshLocalStoreStatus();
+    showSuccess(description: loc.local_store_left_host);
   }
 
   Future<void> _ensureDefaultDownloadPath() async {
@@ -107,6 +174,11 @@ class AppSettingsController extends BaseController {
     } else {
       SyncManager().disableAutoSync();
     }
+  }
+
+  void setOfflineModeEnabled(bool value) {
+    appPref.offlineModeEnabled = value;
+    offlineModeEnabled.value = value;
   }
 
   void setCashDrawerEnabled(bool value) {

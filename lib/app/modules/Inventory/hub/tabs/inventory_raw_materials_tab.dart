@@ -110,6 +110,8 @@ extension _InventoryRawMaterialsTab on _InventoryHubScreenState {
                         icon: const Icon(Icons.clear, size: 18),
                       ),
                     ],
+                    const SizedBox(width: 4),
+                    _stockExportButtons(),
                   ],
                 );
               }),

@@ -5,7 +5,7 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
-import 'package:billkaro/app/services/sync/bill_number_util.dart';
+import 'package:billkaro/app/services/sync/bill_number_allocator.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/offline/offline_table_loader.dart';
@@ -400,14 +400,8 @@ class OrderDetailsController extends BaseController {
       }
 
       if (!resolvedFromApi) {
-        final billNumbers = <String>[
-          ...allOrders.map((order) => order.billNumber),
-          ...localOrders.map((order) => order.billNumber),
-        ];
-        nextBillNumberStr = computeNextBillNumber(
-          outletLastBillNumber: outletBillNumber,
-          orderBillNumbers: billNumbers,
-        ).toString();
+        nextBillNumberStr =
+            await BillNumberAllocator.instance.peekNext(outletId: outletId);
       }
 
       debugPrint('📊 Bill number calculation:');
@@ -431,17 +425,10 @@ class OrderDetailsController extends BaseController {
       try {
         final outletId = appPref.selectedOutlet?.id;
         if (outletId != null) {
-          // Get outlet billNumber from appPref
-          final outletBillNumber = appPref.selectedOutlet?.billNumber ?? 0;
-
-          final localOrders = await _db.getAllOrders(outletId: outletId);
-
           if (billNumber.text.isEmpty) {
-            final finalBill = computeNextBillNumber(
-              outletLastBillNumber: outletBillNumber,
-              orderBillNumbers: localOrders.map((order) => order.billNumber),
+            billNumber.text = await BillNumberAllocator.instance.peekNext(
+              outletId: outletId,
             );
-            billNumber.text = finalBill.toString();
           }
         } else {
           if (billNumber.text.isEmpty) {

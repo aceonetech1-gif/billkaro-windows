@@ -58,6 +58,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   Obx(() {
                     c.orderFrom.value;
                     c.hasOutletTables.value;
+                    c.availableTables.length;
                     if (Get.isRegistered<HomeScreenController>()) {
                       Get.find<HomeScreenController>().selectedOutlet.value;
                     }

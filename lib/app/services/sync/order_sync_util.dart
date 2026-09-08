@@ -55,7 +55,8 @@ OrderModel preserveOrderDiscountMeta(OrderModel remote, OrderModel? local) {
   );
 }
 
-/// Builds a server-safe order payload (strips local-only IDs and billNumber).
+/// Builds a server-safe order payload (strips local-only IDs).
+/// Keeps [billNumber] so offline-reserved numbers can be preferred on upload.
 Map<String, dynamic> buildOrderSyncPayload(OrderModel order) {
   final payload = Map<String, dynamic>.from(order.toJson());
 
@@ -63,8 +64,6 @@ Map<String, dynamic> buildOrderSyncPayload(OrderModel order) {
     payload.remove('id');
   }
 
-  // Backend always assigns bill numbers; sending one can cause conflicts.
-  payload.remove('billNumber');
   // Client-only fields for hold/reopen UI — not stored on the server.
   payload.remove('discountValue');
 

@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/switch_with_on_off_label.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
@@ -269,14 +270,12 @@ class OrderPreferencesScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              Transform.scale(
+              SwitchWithOnOffLabel(
+                value: controller.kotModeEnabled.value,
+                onChanged: controller.toggleKotMode,
+                activeTrackColor: AppColor.primary,
+                activeColor: Colors.white,
                 scale: 0.92,
-                child: Switch(
-                  value: controller.kotModeEnabled.value,
-                  onChanged: controller.toggleKotMode,
-                  activeTrackColor: AppColor.primary,
-                  activeColor: Colors.white,
-                ),
               ),
             ],
           ),

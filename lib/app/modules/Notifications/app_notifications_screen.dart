@@ -136,7 +136,7 @@ class _NotificationTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => controller.markRead(item.id),
+        onTap: () => controller.onNotificationTap(item),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

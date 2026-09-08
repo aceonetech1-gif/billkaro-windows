@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_drawer_scope.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_status_filter.dart';
@@ -164,8 +166,10 @@ class PurchaseOrderController extends BaseController {
     };
     final res = await callApi(apiClient.createPurchaseOrder(outletId, body));
     if (res != null) {
-      await loadPurchaseOrders();
-      await inventory.loadDashboard();
+      // Refresh list in background so the create drawer can close immediately.
+      unawaited(
+        Future.wait([loadPurchaseOrders(), inventory.loadDashboard()]),
+      );
       return true;
     }
     return false;
@@ -245,8 +249,10 @@ class PurchaseOrderController extends BaseController {
       apiClient.updatePurchaseOrder(outletId, poId, body),
     );
     if (res != null) {
-      await loadPurchaseOrders();
-      await inventory.loadDashboard();
+      // Refresh list in background so the edit drawer can close immediately.
+      unawaited(
+        Future.wait([loadPurchaseOrders(), inventory.loadDashboard()]),
+      );
       return true;
     }
     return false;
@@ -255,8 +261,9 @@ class PurchaseOrderController extends BaseController {
   Future<bool> cancelPurchaseOrder(String poId) async {
     final res = await callApi(apiClient.cancelPurchaseOrder(outletId, poId));
     if (res != null) {
-      await loadPurchaseOrders();
-      await inventory.loadDashboard();
+      unawaited(
+        Future.wait([loadPurchaseOrders(), inventory.loadDashboard()]),
+      );
       return true;
     }
     return false;

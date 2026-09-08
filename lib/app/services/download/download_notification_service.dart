@@ -4,11 +4,11 @@ import 'package:billkaro/app/services/notification/app_background_notification_s
 import 'package:billkaro/app/services/notification/app_notification_item.dart';
 import 'package:billkaro/app/services/notification/app_notification_store.dart';
 import 'package:billkaro/config/app_pref.dart';
-import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path/path.dart' as p;
 
 /// Shows download progress / complete notifications (inbox + banner + OS).
@@ -34,7 +34,57 @@ class DownloadNotificationService {
   /// Stable OS notification id for item-report PDF downloads.
   static const int itemPdfDownloadNotificationId = 5105;
 
+  /// Stable OS notification id for inventory stock Excel downloads.
+  static const int inventoryStockExcelDownloadNotificationId = 5106;
+
+  /// Stable OS notification id for inventory stock PDF downloads.
+  static const int inventoryStockPdfDownloadNotificationId = 5107;
+
   static const int _notificationIdBase = 5000;
+
+  /// Opens a previously downloaded file from a notification payload / path.
+  static Future<void> openDownloadedFile(String? filePath) async {
+    final normalizedPath = _normalizeFilePath(filePath);
+    if (normalizedPath.isEmpty) return;
+
+    try {
+      await OpenFile.open(normalizedPath);
+    } catch (e) {
+      debugPrint('❌ [DOWNLOAD] open failed: $e');
+      _showOpenFailedSnackbar(normalizedPath);
+    }
+  }
+
+  static String _normalizeFilePath(String? input) {
+    if (input == null) return '';
+    var path = input.trim();
+    if (path.isEmpty) return '';
+
+    // Notifications may include `file://` URIs.
+    if (path.startsWith('file://')) {
+      path = path.substring('file://'.length);
+    }
+
+    // Some payloads may arrive URL-encoded.
+    try {
+      path = Uri.decodeFull(path);
+    } catch (_) {}
+
+    return path;
+  }
+
+  static void _showOpenFailedSnackbar(String path) {
+    if (!Get.isRegistered<GetMaterialController>()) return;
+    Get.rawSnackbar(
+      backgroundColor: const Color(0xFFB71C1C),
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+      messageText: Text(
+        'Unable to open ${p.basename(path)}',
+        style: const TextStyle(color: Colors.white),
+      ),
+    );
+  }
 
   /// Shows an ongoing "downloading…" notification (no loader dialog).
   Future<void> notifyProgress({
@@ -73,7 +123,11 @@ class DownloadNotificationService {
     if (Get.isRegistered<AppPref>()) {
       final pref = Get.find<AppPref>();
       if (!pref.notificationsEnabled) {
-        _showInAppBanner(title: title, message: message);
+        _showInAppBanner(
+          title: title,
+          message: message,
+          filePath: filePath,
+        );
         return;
       }
     }
@@ -88,12 +142,17 @@ class DownloadNotificationService {
           type: AppNotificationType.download,
           title: title,
           body: message,
+          filePath: filePath,
           createdAtIso: DateTime.now().toUtc().toIso8601String(),
         ),
       );
     }
 
-    _showInAppBanner(title: title, message: message);
+    _showInAppBanner(
+      title: title,
+      message: message,
+      filePath: filePath,
+    );
 
     await AppBackgroundNotificationService.instance.showDownloadComplete(
       notificationId: resolvedId,
@@ -133,23 +192,27 @@ class DownloadNotificationService {
     final name = fileName.trim().isNotEmpty
         ? fileName
         : p.basename(filePath);
-    return '$name saved to Downloads';
+    return 'Tap to open $name';
   }
 
   void _showInAppBanner({
     required String title,
     required String message,
+    String? filePath,
     IconData icon = Icons.download_done_rounded,
     Color backgroundColor = const Color(0xFF1B5E20),
     Duration duration = const Duration(seconds: 4),
   }) {
     if (!Get.isRegistered<GetMaterialController>()) return;
 
-    AppSnackbar.showRaw(
+    Get.rawSnackbar(
       backgroundColor: backgroundColor,
       snackPosition: SnackPosition.TOP,
       duration: duration,
       icon: Icon(icon, color: Colors.white),
+      onTap: filePath == null || filePath.trim().isEmpty
+          ? null
+          : (_) => openDownloadedFile(filePath),
       titleText: Text(
         title,
         style: const TextStyle(

@@ -791,6 +791,15 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    Text(
+                      'Bill #${order.billNumber ?? order.bill_number ?? 'N/A'}',
+                      style: TextStyle(
+                        color: AppColor.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     // Time
                     Row(
                       mainAxisSize: MainAxisSize.min,

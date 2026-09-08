@@ -135,7 +135,7 @@ class SplashScreen extends StatelessWidget {
                             ),
                           ),
                       child: const Text(
-                        'BillKaro chill\nKaro',
+                        'Bill Kro\nChill Kro',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 36,
@@ -169,8 +169,8 @@ class SplashScreen extends StatelessWidget {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'Indian first prepaid software',
+                        child: Text(
+                          "India's First Wallet-Based POS Software",
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white,

@@ -346,6 +346,29 @@ class AppDatabase extends _$AppDatabase {
     return result;
   }
 
+  /// True if another order for [outletId] already uses [billNumber].
+  Future<bool> isBillNumberTaken({
+    required String outletId,
+    required String billNumber,
+    String? excludeOrderId,
+  }) async {
+    final needle = billNumber.trim().toLowerCase();
+    if (needle.isEmpty) return false;
+
+    final rows = await (select(orders)
+          ..where((tbl) => tbl.outletId.equals(outletId)))
+        .get();
+
+    for (final row in rows) {
+      if (excludeOrderId != null && row.id == excludeOrderId) continue;
+      if (row.billNumber.trim().toLowerCase() == needle) return true;
+      final a = int.tryParse(row.billNumber.trim());
+      final b = int.tryParse(billNumber.trim());
+      if (a != null && b != null && a == b) return true;
+    }
+    return false;
+  }
+
   /// Paginated orders (newest first). Optional search matches bill, table, customer, phone, source.
   Future<({List<OrderModel> items, bool hasMore})> getOrdersPage({
     required String outletId,

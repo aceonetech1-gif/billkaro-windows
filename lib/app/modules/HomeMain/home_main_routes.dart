@@ -40,7 +40,10 @@ abstract class HomeMainRoutes {
   static const whatsaapMarketing = '/whatsaap-marketing';
   static const storeSessionHistory = '/store-session-history';
   static const settings = '/app-settings';
+  static const localStoreHost = '/local-store-host';
   static const promotions = '/promotions';
+  static const offerType = '/promotions/offer-type';
+  static const offerForm = '/promotions/offer-form';
   static const helpSetup = '/help-setup';
   static const notifications = '/notifications';
   static const changeLanguage = '/change-language';
@@ -232,7 +235,9 @@ abstract class HomeMainRoutes {
     if (path.startsWith(printer)) {
       return _indexOfRoute(routes, printer);
     }
-    if (path.startsWith(settings) || path.startsWith(promotions)) {
+    if (path.startsWith(settings) ||
+        path.startsWith(promotions) ||
+        path.startsWith(localStoreHost)) {
       return _indexOfRoute(routes, settings);
     }
     if (path.startsWith(profile)) {

@@ -18,6 +18,7 @@ import 'package:billkaro/app/modules/Items/menuItem/menu_item_screen.dart';
 import 'package:billkaro/app/modules/KOTHistory/kot_history_screen.dart';
 import 'package:billkaro/app/modules/KitchenDisplay/kitchen_display_screen.dart';
 import 'package:billkaro/app/modules/Language/language_screen.dart';
+import 'package:billkaro/app/modules/LocalStore/local_store_host_screen.dart';
 import 'package:billkaro/app/modules/Menu/menu_screen.dart';
 import 'package:billkaro/app/modules/Notifications/app_notifications_screen.dart';
 import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_screen.dart';
@@ -25,7 +26,9 @@ import 'package:billkaro/app/modules/Order/DeletedOrders/deleted_orders_screen.d
 import 'package:billkaro/app/modules/Order/StockSummary/stock_summary_screen.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
-import 'package:billkaro/app/modules/Promotions/promotions_screen.dart';
+import 'package:billkaro/app/modules/Promotions/screens/offer_form_screen.dart';
+import 'package:billkaro/app/modules/Promotions/screens/offer_type_screen.dart';
+import 'package:billkaro/app/modules/Promotions/screens/promotions_list_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/AddRegularCustomer/addregular_customer_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/CustomerDetails/customer_details_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/CustomerList/customer_list_Screen.dart';
@@ -316,10 +319,31 @@ class HomeMainModule extends Module {
           ),
         ),
         ChildRoute(
+          HomeMainRoutes.localStoreHost,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSettings,
+            child: const LocalStoreHostScreen(),
+          ),
+        ),
+        ChildRoute(
           HomeMainRoutes.promotions,
           child: (_) => _staffGatedRoute(
             allowed: StaffAccess.canManageSettings,
-            child: PromotionsScreen(),
+            child: PromotionsListScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.offerType,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSettings,
+            child: const OfferTypeScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.offerForm,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSettings,
+            child: OfferFormScreen(),
           ),
         ),
         ChildRoute(HomeMainRoutes.helpSetup, child: (_) => HelpSetupScreen()),

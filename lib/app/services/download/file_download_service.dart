@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:typed_data';
 
 import 'package:billkaro/app/services/download/download_notification_service.dart';
 import 'package:billkaro/utils/download_path_util.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 /// Saves files on a background isolate and notifies when the download finishes.
 ///
@@ -39,11 +39,16 @@ class FileDownloadService {
       await Directory(dir).create(recursive: true);
 
       final safeName = _sanitizeFileName(fileName);
-      final filePath = '$dir/$safeName';
-
-      final savedPath = await Isolate.run(
-        () => _writeBytesToDisk(filePath, bytes),
+      final saved = await Isolate.run(
+        () => _writeBytesToDisk(
+          directory: dir,
+          fileName: safeName,
+          bytes: bytes,
+        ),
       );
+
+      final savedPath = saved['path']!;
+      final savedName = saved['fileName']!;
 
       final file = File(savedPath);
       if (!await file.exists()) {
@@ -53,10 +58,10 @@ class FileDownloadService {
 
       if (notify) {
         await DownloadNotificationService.instance.notifyComplete(
-          fileName: safeName,
+          fileName: savedName,
           filePath: savedPath,
           title: notificationTitle,
-          body: notificationBody,
+          body: notificationBody ?? 'Tap to open $savedName',
           notificationId: notificationId,
         );
       }
@@ -76,9 +81,70 @@ class FileDownloadService {
 }
 
 /// Top-level so [Isolate.run] can execute it on a background isolate.
-Future<String> _writeBytesToDisk(String filePath, Uint8List bytes) async {
-  final file = File(filePath);
-  await file.parent.create(recursive: true);
-  await file.writeAsBytes(bytes, flush: true);
-  return filePath;
+Future<Map<String, String>> _writeBytesToDisk({
+  required String directory,
+  required String fileName,
+  required Uint8List bytes,
+}) async {
+  Object? lastError;
+
+  for (final candidate in _candidateFileNames(fileName)) {
+    final filePath = p.join(directory, candidate);
+    try {
+      final file = File(filePath);
+      await file.parent.create(recursive: true);
+
+      final handle = await file.open(mode: FileMode.writeOnly);
+      try {
+        await handle.writeFrom(bytes);
+        await handle.flush();
+      } finally {
+        await handle.close();
+      }
+
+      return {'path': filePath, 'fileName': candidate};
+    } on FileSystemException catch (e) {
+      lastError = e;
+      if (_isLockedOrBusyError(e)) {
+        continue;
+      }
+      rethrow;
+    }
+  }
+
+  if (lastError != null) {
+    throw lastError;
+  }
+
+  throw FileSystemException(
+    'Cannot write file because it is in use by another process',
+    p.join(directory, fileName),
+  );
+}
+
+bool _isLockedOrBusyError(FileSystemException error) {
+  final code = error.osError?.errorCode;
+  // 32 = Windows sharing violation, 13 = permission denied (often locked file)
+  if (code == 32 || code == 13) return true;
+
+  final message = error.message.toLowerCase();
+  return message.contains('being used by another process') ||
+      message.contains('access is denied');
+}
+
+List<String> _candidateFileNames(String fileName) {
+  final ext = p.extension(fileName);
+  final base = p.basenameWithoutExtension(fileName);
+  final stamp = DateTime.now().millisecondsSinceEpoch;
+
+  final names = <String>[
+    fileName,
+    '$base-$stamp$ext',
+  ];
+
+  for (var i = 1; i <= 20; i++) {
+    names.add('$base ($i)$ext');
+  }
+
+  return names;
 }

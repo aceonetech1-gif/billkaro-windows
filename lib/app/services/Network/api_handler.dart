@@ -102,8 +102,9 @@ List<String> _processErrorResponse(dynamic errorData) {
             errors.add('$field: $messages');
           }
         });
+      } else if (errorData['message'] != null) {
+        errors.add(errorData['message'].toString());
       }
-      // Add other cases as needed
     } else if (errorData is String) {
       errors.add(errorData);
     }
