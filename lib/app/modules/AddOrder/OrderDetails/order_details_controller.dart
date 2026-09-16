@@ -28,6 +28,9 @@ class OrderDetailsController extends BaseController {
   final discountType = 'percentage'.obs;
   final status = 'pending'.obs;
 
+  /// True when this order already has a saved discount value.
+  bool _discountFromArgs = false;
+
   final RxBool isLoading = true.obs;
   final RxList<TableModel> availableTables = <TableModel>[].obs;
   final RxBool hasOutletTables = false.obs;
@@ -44,6 +47,21 @@ class OrderDetailsController extends BaseController {
 
   OrderModel? orderDetails;
 
+  static String _normalizeDiscountType(dynamic raw) {
+    final type = raw?.toString().trim().toLowerCase() ?? '';
+    return type == 'amount' ? 'amount' : 'percentage';
+  }
+
+  static double _parseDiscountArg(dynamic raw) {
+    if (raw is num) return raw.toDouble();
+    return double.tryParse('${raw ?? ''}'.trim()) ?? 0.0;
+  }
+
+  static String _formatDiscountArg(double value) {
+    if (value == value.roundToDouble()) return value.toInt().toString();
+    return value.toString();
+  }
+
   /// Save Order Details (bill number is preview-only; server assigns on create).
   Future<CreateorderRequest?> buildOrderDetails() async {
     return CreateorderRequest(
@@ -53,6 +71,7 @@ class OrderDetailsController extends BaseController {
       phoneNumber: phoneNumber.text,
       discount: double.tryParse(discount.text) ?? 0.0,
       discountType: discountType.value,
+      discountValue: double.tryParse(discount.text) ?? 0.0,
       serviceCharge: double.tryParse(serviceCharge.text) ?? 0.0,
       status: 'pending',
     );
@@ -132,10 +151,14 @@ class OrderDetailsController extends BaseController {
       tableNumber.text = args['tableNumber'] ?? '';
       customerName.text = args['customerName'] ?? '';
       phoneNumber.text = args['phoneNumber'] ?? '';
-      discount.text = '${args['discount'] ?? 0.0}';
-      final rawDiscountType = args['discountType']?.toString().trim().toLowerCase();
-      discountType.value =
-          rawDiscountType == 'amount' ? 'amount' : 'percentage';
+      final rawDiscount = _parseDiscountArg(
+        args['discountValue'] ?? args['discount'],
+      );
+      discount.text = _formatDiscountArg(rawDiscount);
+      discountType.value = _normalizeDiscountType(args['discountType']);
+      // Lock when type/value already came from the order (hold reopen).
+      _discountFromArgs =
+          args['discountType'] != null || rawDiscount > 0;
       serviceCharge.text = '${args['serviceCharge'] ?? 0.0}';
       status.value = args['status'] ?? '';
       // billNumber.text = args['billNumber'] ?? '';
@@ -177,11 +200,13 @@ class OrderDetailsController extends BaseController {
           customerName.text = customer.customerName;
         }
         final existingDiscount = double.tryParse(discount.text.trim()) ?? 0.0;
-        // Don't overwrite a discount already set on this order (e.g. hold reopen).
-        if (customer.loyalityDiscount > 0 && existingDiscount <= 0) {
-          discountType.value = customer.loyalityDiscountType == 'amount'
-              ? 'amount'
-              : 'percentage';
+        // Don't overwrite a discount already set on this order (e.g. reopen).
+        if (customer.loyalityDiscount > 0 &&
+            existingDiscount <= 0 &&
+            !_discountFromArgs) {
+          discountType.value = _normalizeDiscountType(
+            customer.loyalityDiscountType,
+          );
           discount.text = customer.loyalityDiscount.toString();
         }
       }

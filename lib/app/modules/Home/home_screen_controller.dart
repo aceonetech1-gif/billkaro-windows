@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:billkaro/app/Database/app_database.dart';
+import 'package:billkaro/app/Widgets/delete_outlet_otp_dialog.dart';
 import 'package:billkaro/app/modules/Home/Widgets/outlet_bottomsheet.dart';
 import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/modules/Home/payment_controller.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
+import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
@@ -46,6 +48,10 @@ class HomeScreenController extends BaseController {
   final RxList<CategorySales> todayCategorySales = <CategorySales>[].obs;
   final RxList<TopSellingItem> topSellingItems = <TopSellingItem>[].obs;
 
+  /// Low-stock raw materials for the selected outlet (home alert strip).
+  final RxList<LowStockMaterial> lowStockItems = <LowStockMaterial>[].obs;
+  final RxBool isLoadingLowStock = false.obs;
+
   // Add this observable for selected outlet
   final Rx<OutletData?> selectedOutlet = Rx<OutletData?>(null);
 
@@ -81,6 +87,7 @@ class HomeScreenController extends BaseController {
 
     // Initial load
     await getOrderList();
+    unawaited(loadLowStockItems());
 
     // Listen to connectivity changes - only call API when coming back online
     _connectivitySubscription = ConnectivityHelper.instance.onConnectivityChange
@@ -89,6 +96,7 @@ class HomeScreenController extends BaseController {
           if (isConnected && !_lastConnectivityState && !_hasLoadedFromApi) {
             debugPrint('🌐 Internet came back - refreshing orders from API');
             getOrderList(forceApiRefresh: true);
+            unawaited(loadLowStockItems());
           }
           _lastConnectivityState = isConnected;
         });
@@ -782,72 +790,22 @@ class HomeScreenController extends BaseController {
     if (deletedOutletId == null || deletedOutletId.isEmpty) return;
 
     final loc = AppLocalizations.of(Get.context!);
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.delete_outline_rounded,
-                color: Colors.red,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(loc?.delete_outlet ?? 'Delete Outlet'),
-            ),
-          ],
-        ),
-        content: Text(
-          'Delete ${outlet.businessName ?? 'this outlet'}?\nThis cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(loc?.cancel ?? 'Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () => Get.back(result: true),
-            child: Text(loc?.delete ?? 'Delete'),
-          ),
-        ],
-      ),
-    );
+    final ownerId = appPref.ownerUserId;
+    if (ownerId == null) return;
 
-    if (confirm != true) return;
+    final confirmed = await showDeleteOutletOtpDialog(
+      outletName: outlet.businessName?.trim().isNotEmpty == true
+          ? outlet.businessName!.trim()
+          : 'this outlet',
+      ownerId: ownerId,
+      outletId: deletedOutletId,
+      ownerEmail: appPref.user?.email,
+      ownerPhone: appPref.user?.mobile,
+    );
+    if (confirmed != true) return;
 
     try {
-      final ownerId = appPref.ownerUserId;
-      if (ownerId == null) return;
-
       final wasSelected = selectedOutlet.value?.id == deletedOutletId;
-      final res = await callApi(
-        apiClient.deleteOutlet(ownerId, deletedOutletId),
-      );
-
-      if (res['status'] != 'success') {
-        showError(
-          description:
-              res['message']?.toString() ??
-              (loc?.failed_to_delete_outlet ?? 'Failed to delete outlet'),
-        );
-        return;
-      }
 
       try {
         final db = Get.isRegistered<AppDatabase>()
@@ -902,14 +860,58 @@ class HomeScreenController extends BaseController {
     todayCategorySales.value = <CategorySales>[];
     topSellingItems.value = <TopSellingItem>[];
     occupiedTableOrders.value = <OrderModel>[];
+    lowStockItems.clear();
     _hasLoadedFromApi = false;
     update();
 
     unawaited(() async {
       await refreshOutletScopedControllers();
       await getOrderList(forceApiRefresh: true);
+      unawaited(loadLowStockItems());
       update();
     }());
+  }
+
+  /// Fetches low-stock materials for the current outlet (silent on failure).
+  Future<void> loadLowStockItems() async {
+    if (!StaffAccess.canViewInventory) {
+      lowStockItems.clear();
+      return;
+    }
+
+    final outletId = selectedOutlet.value?.id ?? appPref.selectedOutlet?.id;
+    if (outletId == null || outletId.isEmpty) {
+      lowStockItems.clear();
+      return;
+    }
+
+    final isOnline = await NetworkUtils.hasInternetConnection();
+    if (!isOnline) return;
+
+    try {
+      isLoadingLowStock.value = true;
+      final res = await callApi(
+        apiClient.getInventoryLowStock(outletId),
+        showLoader: false,
+      );
+      if (res is Map && res['data'] is Map) {
+        final data = Map<String, dynamic>.from(res['data'] as Map);
+        final materials = data['rawMaterials'] as List<dynamic>? ?? const [];
+        lowStockItems.assignAll(
+          materials
+              .map(
+                (e) => LowStockMaterial.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
+              .toList(),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to load low stock for home: $e');
+    } finally {
+      isLoadingLowStock.value = false;
+    }
   }
 
   /// Refresh outlets from server

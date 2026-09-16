@@ -215,6 +215,12 @@ class StaffAccess {
   static bool get canGenerateReports =>
       hasPermission(StaffPermissionKeys.generateReports);
 
+  static bool get canViewExpenses =>
+      hasPermission(StaffPermissionKeys.viewExpenses);
+
+  static bool get canCreateExpenses =>
+      hasPermission(StaffPermissionKeys.createExpenses);
+
   /// Business overview, payment summary, and sales trends on the home dashboard.
   static bool get canViewDashboardInsights => isOwnerSession || canViewReports;
 
@@ -335,8 +341,12 @@ class StaffAccess {
     if (path.startsWith('/whatsaap-marketing')) return canUseWhatsAppMarketing;
     if (path.startsWith('/reports') ||
         path.startsWith('/order-report') ||
-        path.startsWith('/item-report')) {
+        path.startsWith('/item-report') ||
+        path.startsWith('/day-end-report')) {
       return canViewReports;
+    }
+    if (path.startsWith('/expense-report')) {
+      return canViewExpenses;
     }
     if (path.startsWith('/inventory') || path.startsWith('/purchase-orders')) {
       return canViewInventory;

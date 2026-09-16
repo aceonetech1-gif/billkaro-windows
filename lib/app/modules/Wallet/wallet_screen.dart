@@ -149,9 +149,15 @@ class _WindowsBody extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: _QuickAddCard(
-                      controller: controller,
-                      loc: loc,
+                    child: Column(
+                      children: [
+                        _QuickAddCard(
+                          controller: controller,
+                          loc: loc,
+                        ),
+                        const Gap(16),
+                        _CouponCard(controller: controller),
+                      ],
                     ),
                   ),
                   const Gap(20),
@@ -639,6 +645,92 @@ class _QuickAddCard extends StatelessWidget {
   }
 }
 
+class _CouponCard extends StatelessWidget {
+  const _CouponCard({required this.controller});
+
+  final WalletController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionLabel('Redeem coupon'),
+          const Gap(6),
+          Text(
+            'Enter a coupon code to add money to your wallet',
+            style: TextStyle(
+              fontSize: 12,
+              color: _WalletStyle.muted(context),
+              height: 1.3,
+            ),
+          ),
+          const Gap(14),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller.couponCodeController,
+                  textCapitalization: TextCapitalization.characters,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 8,
+                  onSubmitted: (_) => controller.redeemCoupon(),
+                  decoration: InputDecoration(
+                    hintText: '8-character code',
+                    counterText: '',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              const Gap(10),
+              Obx(() {
+                final loading = controller.isRedeemingCoupon.value;
+                return FilledButton(
+                  onPressed: loading ? null : controller.redeemCoupon,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColor.secondaryPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Apply'),
+                );
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AmountTile extends StatefulWidget {
   const _AmountTile({
     required this.label,
@@ -991,6 +1083,8 @@ class _MobileBody extends StatelessWidget {
           ],
           const Gap(16),
           _QuickAddCard(controller: controller, loc: loc),
+          const Gap(16),
+          _CouponCard(controller: controller),
           const Gap(16),
           _InsightsCard(controller: controller, loc: loc),
           const Gap(16),

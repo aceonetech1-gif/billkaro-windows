@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:billkaro/app/Database/app_database.dart';
+import 'package:billkaro/app/Widgets/delete_outlet_otp_dialog.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
@@ -405,41 +406,23 @@ class BusinessDetailsController extends BaseController {
     final outlet = selectedOutlet.value;
     if (outlet == null) return;
 
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Delete Outlet'),
-        content: Text(
-          'Delete ${outlet.businessName} ?\nThis cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Get.back(result: true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+    final ownerId = appPref.ownerUserId;
+    final outletId = outlet.id;
+    if (ownerId == null || outletId == null || outletId.isEmpty) return;
 
-    if (confirm != true) return;
+    final confirmed = await showDeleteOutletOtpDialog(
+      outletName: outlet.businessName?.trim().isNotEmpty == true
+          ? outlet.businessName!.trim()
+          : 'this outlet',
+      ownerId: ownerId,
+      outletId: outletId,
+      ownerEmail: appPref.user?.email,
+      ownerPhone: appPref.user?.mobile,
+    );
+    if (confirmed != true) return;
 
     try {
-      final ownerId = appPref.ownerUserId;
-      if (ownerId == null) return;
-
-      final deletedOutletId = outlet.id!;
-      final res = await callApi(
-        apiClient.deleteOutlet(ownerId, deletedOutletId),
-      );
-
-      if (res['status'] != 'success') {
-        showError(description: res['message']);
-        return;
-      }
+      final deletedOutletId = outletId;
 
       // Clear local offline data for the deleted outlet
       if (Get.isRegistered<AppDatabase>()) {

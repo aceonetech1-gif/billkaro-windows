@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Inventory/services/inventory_stock_export_service.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
@@ -117,6 +118,13 @@ class InventoryController extends BaseController {
         Map<String, dynamic>.from(res['data'] as Map),
       );
     }
+    _refreshHomeLowStock();
+  }
+
+  /// Keeps Home low-stock alerts in sync after inventory changes.
+  void _refreshHomeLowStock() {
+    if (!Get.isRegistered<HomeScreenController>()) return;
+    unawaited(Get.find<HomeScreenController>().loadLowStockItems());
   }
 
   Future<void> loadRawMaterials() async {

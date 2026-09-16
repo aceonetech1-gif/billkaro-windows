@@ -481,7 +481,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             return TextFormField(
               controller: c.discount,
               keyboardType: TextInputType.number,
-              validator: (v) => v?.isEmpty ?? true ? loc.required : null,
               decoration: _fieldDecoration(
                 hintText: loc.enter_discount,
                 prefixIcon: isPercent ? Icons.percent : Icons.currency_rupee,

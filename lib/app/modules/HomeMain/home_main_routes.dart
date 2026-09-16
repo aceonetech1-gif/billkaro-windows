@@ -20,6 +20,8 @@ abstract class HomeMainRoutes {
   static const kotReceipt = '/kot-receipt';
   static const orderReport = '/order-report';
   static const itemsReport = '/item-report';
+  static const expenseReport = '/expense-report';
+  static const dayEndReport = '/day-end-report';
   static const invoiceScreen = '/invoice-screen';
   static const createOrder = '/create-order';
   static const reports = '/reports';
@@ -201,6 +203,8 @@ abstract class HomeMainRoutes {
     if (path.startsWith(reports) ||
         path.startsWith(orderReport) ||
         path.startsWith(itemsReport) ||
+        path.startsWith(expenseReport) ||
+        path.startsWith(dayEndReport) ||
         path.startsWith(storeSessionHistory)) {
       return _indexOfRoute(routes, reports);
     }

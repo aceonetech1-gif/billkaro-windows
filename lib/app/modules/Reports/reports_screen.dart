@@ -78,6 +78,30 @@ class ReportsScreen extends StatelessWidget {
                                 enableHover: isWindows,
                               ),
                             ),
+                            if (StaffAccess.canViewExpenses)
+                              SizedBox(
+                                width: tileWidth,
+                                child: _ReportCard(
+                                  icon: Icons.payments_outlined,
+                                  iconColor: const Color(0xFF8B5CF6),
+                                  title: 'Expense Report',
+                                  subtitle: 'Track and manage outlet expenses',
+                                  onTap: controller.navigateToExpenseReport,
+                                  enableHover: isWindows,
+                                ),
+                              ),
+                            SizedBox(
+                              width: tileWidth,
+                              child: _ReportCard(
+                                icon: Icons.nightlight_round,
+                                iconColor: const Color(0xFFC62828),
+                                title: 'Day End Report',
+                                subtitle:
+                                    'Live day summary and recent closed days',
+                                onTap: controller.navigateToDayEndReport,
+                                enableHover: isWindows,
+                              ),
+                            ),
                             if (StaffAccess.canViewStoreHistory)
                               SizedBox(
                                 width: tileWidth,

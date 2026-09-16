@@ -1,3 +1,4 @@
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/config/config.dart';
@@ -34,44 +35,19 @@ Future<void> maybeShowLowStockAlert({
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.red.shade700,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                loc.section_low_stock_alerts,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+        title: Text(
+          loc.section_low_stock_alerts,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         content: SizedBox(
-          width: double.maxFinite,
+          width: 420,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 360),
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, index) {
-                final item = items[index];
-                return _LowStockRow(item: item);
-              },
+              itemBuilder: (_, index) => _LowStockRow(item: items[index]),
             ),
           ),
         ),
@@ -97,6 +73,12 @@ Future<List<LowStockMaterial>> _fetchLowStockItems({
   required String outletId,
   ApiClient? apiClient,
 }) async {
+  // Reuse home cache when available so the dialog opens instantly.
+  if (Get.isRegistered<HomeScreenController>()) {
+    final cached = Get.find<HomeScreenController>().lowStockItems;
+    if (cached.isNotEmpty) return List<LowStockMaterial>.from(cached);
+  }
+
   final client =
       apiClient ??
       (Get.isRegistered<ApiClient>() ? Get.find<ApiClient>() : null);
@@ -104,14 +86,19 @@ Future<List<LowStockMaterial>> _fetchLowStockItems({
 
   try {
     final res = await callApi(
-      client.getInventoryDashboard(outletId),
+      client.getInventoryLowStock(outletId),
       showLoader: false,
     );
-    if (res is! Map || res['data'] == null) return const [];
-    final dashboard = InventoryDashboardData.fromJson(
-      Map<String, dynamic>.from(res['data'] as Map),
-    );
-    return dashboard.lowStockMaterials;
+    if (res is! Map || res['data'] is! Map) return const [];
+    final data = Map<String, dynamic>.from(res['data'] as Map);
+    final materials = data['rawMaterials'] as List<dynamic>? ?? const [];
+    return materials
+        .map(
+          (e) => LowStockMaterial.fromJson(
+            Map<String, dynamic>.from(e as Map),
+          ),
+        )
+        .toList();
   } catch (_) {
     return const [];
   }
@@ -128,6 +115,7 @@ class _LowStockRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFFFEF2F2),
@@ -135,24 +123,39 @@ class _LowStockRow extends StatelessWidget {
         border: Border.all(color: const Color(0xFFFECACA)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.inventory_2_outlined, size: 18, color: Colors.red.shade700),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.inventory_2_outlined,
+              size: 18,
+              color: Colors.red.shade700,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            '${_fmt(item.currentStock)} / ${_fmt(item.minStock)} ${item.unit}',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.red.shade700,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13.5,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_fmt(item.currentStock)} / ${_fmt(item.minStock)} ${item.unit}',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

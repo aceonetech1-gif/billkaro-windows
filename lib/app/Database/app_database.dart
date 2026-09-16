@@ -12,6 +12,7 @@ import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/app/Database/promotion_table.dart';
 import 'package:billkaro/app/services/Modals/promotions/promotion_response.dart';
 import 'package:billkaro/app/services/sync/item_sync_util.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
@@ -213,46 +214,71 @@ class AppDatabase extends _$AppDatabase {
         ? await getUnsyncedOrderIds(outletId: outletId)
         : <String>{};
 
+    // API rows omit client-only discountType/discountValue — keep local meta.
+    final localDiscountById = <String, OrderModel>{};
+    if (isSyncedFromApi) {
+      for (final order in ordersList) {
+        if (protectedIds.contains(order.id)) continue;
+        final existing = await (select(
+          orders,
+        )..where((tbl) => tbl.id.equals(order.id))).getSingleOrNull();
+        if (existing == null) continue;
+        final local = await _orderRowToModel(existing);
+        if (local.discountType != null || local.discountValue != null) {
+          localDiscountById[order.id] = local;
+        }
+      }
+    }
+
     await batch((batch) {
       for (final order in ordersList) {
         if (protectedIds.contains(order.id)) continue;
 
+        final orderToSave = isSyncedFromApi
+            ? preserveOrderDiscountMeta(order, localDiscountById[order.id])
+            : order;
+
         batch.insert(
           orders,
           OrdersCompanion(
-            id: Value(order.id),
-            outletId: Value(order.outletId),
-            createdAt: Value(order.createdAt),
-            updatedAt: Value(order.updatedAt),
-            billNumber: Value(order.billNumber),
-            userId: Value(order.userId),
-            tableNumber: Value(order.tableNumber),
-            customerName: Value(order.customerName),
-            phoneNumber: Value(order.phoneNumber),
-            subtotal: Value(order.subtotal),
-            totalTax: Value(order.totalTax),
-            discount: Value(order.discount),
-            serviceCharge: Value(order.serviceCharge),
-            totalAmount: Value(order.totalAmount),
-            paymentReceivedIn: Value(order.paymentReceivedIn),
-            splitPayments: Value(_serializeSplitPayments(order.splitPayments)),
-            status: Value(order.status),
-            orderFrom: Value(order.orderFrom),
+            id: Value(orderToSave.id),
+            outletId: Value(orderToSave.outletId),
+            createdAt: Value(orderToSave.createdAt),
+            updatedAt: Value(orderToSave.updatedAt),
+            billNumber: Value(orderToSave.billNumber),
+            userId: Value(orderToSave.userId),
+            tableNumber: Value(orderToSave.tableNumber),
+            customerName: Value(orderToSave.customerName),
+            phoneNumber: Value(orderToSave.phoneNumber),
+            subtotal: Value(orderToSave.subtotal),
+            totalTax: Value(orderToSave.totalTax),
+            discount: Value(orderToSave.discount),
+            serviceCharge: Value(orderToSave.serviceCharge),
+            totalAmount: Value(orderToSave.totalAmount),
+            paymentReceivedIn: Value(orderToSave.paymentReceivedIn),
+            splitPayments: Value(
+              _serializeSplitPayments(orderToSave.splitPayments),
+            ),
+            status: Value(orderToSave.status),
+            orderFrom: Value(orderToSave.orderFrom),
             isSync: Value(isSyncedFromApi ? 'synced' : 'pending'),
-            orderJson: Value(_encodeOrderJson(order)),
+            orderJson: Value(_encodeOrderJson(orderToSave)),
           ),
           mode: InsertMode.insertOrReplace,
         );
 
         /// Delete old items
-        batch.deleteWhere(orderItems, (tbl) => tbl.orderId.equals(order.id));
+        batch.deleteWhere(
+          orderItems,
+          (tbl) => tbl.orderId.equals(orderToSave.id),
+        );
 
         /// Insert new items
-        for (final item in order.items) {
+        for (final item in orderToSave.items) {
           batch.insert(
             orderItems,
             OrderItemsCompanion(
-              orderId: Value(order.id),
+              orderId: Value(orderToSave.id),
               itemId: Value(item.itemId),
               itemName: Value(item.itemName),
               category: Value(item.category),
@@ -287,6 +313,8 @@ class AppDatabase extends _$AppDatabase {
       subtotal: order.subtotal,
       totalTax: order.totalTax,
       discount: order.discount,
+      discountType: null,
+      discountValue: null,
       serviceCharge: order.serviceCharge,
       totalAmount: order.totalAmount,
       paymentReceivedIn: order.paymentReceivedIn,
@@ -323,6 +351,16 @@ class AppDatabase extends _$AppDatabase {
       debugPrint('Error parsing stored order JSON ${order.id}: $e');
       return null;
     }
+  }
+
+  /// 🔹 GET ONE ORDER BY ID (includes orderJson discount meta)
+  Future<OrderModel?> getOrderById(String orderId) async {
+    if (orderId.trim().isEmpty) return null;
+    final row = await (select(
+      orders,
+    )..where((tbl) => tbl.id.equals(orderId))).getSingleOrNull();
+    if (row == null) return null;
+    return _orderRowToModel(row);
   }
 
   /// 🔹 GET ALL ORDERS (FILTER BY OUTLET)
@@ -503,6 +541,8 @@ class AppDatabase extends _$AppDatabase {
         subtotal: model.subtotal,
         totalTax: model.totalTax,
         discount: model.discount,
+        discountType: model.discountType,
+        discountValue: model.discountValue,
         serviceCharge: model.serviceCharge,
         totalAmount: model.totalAmount,
         paymentReceivedIn: paymentStatus ?? model.paymentReceivedIn,
@@ -811,6 +851,8 @@ class AppDatabase extends _$AppDatabase {
             subtotal: order.subtotal,
             totalTax: order.totalTax,
             discount: order.discount,
+            discountType: order.discountType,
+            discountValue: order.discountValue,
             serviceCharge: order.serviceCharge,
             totalAmount: order.totalAmount,
             paymentReceivedIn: order.paymentReceivedIn,

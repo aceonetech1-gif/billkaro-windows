@@ -263,6 +263,15 @@ class _StoreCloseDialogState extends State<StoreCloseDialog> {
               _statTile(loc.total_sales, _currency.format(s.totalSales)),
             ],
           ),
+          if (s.totalExpenses > 0 || s.expenseCount > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _statTile('Expenses', _currency.format(s.totalExpenses)),
+                _statTile('Cash out', _currency.format(s.cashExpenses)),
+              ],
+            ),
+          ],
           if (data.session.openedByName != null &&
               data.session.openedByName!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),

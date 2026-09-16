@@ -16,7 +16,9 @@ class WalletController extends BaseController {
   final walletCards = <WalletCardModel>[].obs;
   final isProcessingPayment = false.obs;
   final isLoadingWallet = false.obs;
+  final isRedeemingCoupon = false.obs;
   final searchQuery = ''.obs;
+  final couponCodeController = TextEditingController();
 
   double _pendingRechargeAmount = 0;
   String? _pendingWalletCardId;
@@ -75,6 +77,7 @@ class WalletController extends BaseController {
 
   @override
   void onClose() {
+    couponCodeController.dispose();
     razorpayService.dispose();
     super.onClose();
   }
@@ -201,6 +204,101 @@ class WalletController extends BaseController {
 
   Future<void> rechargeFromCard(WalletCardModel card) async {
     await recharge(card.amount, walletCardId: card.id);
+  }
+
+  Future<void> redeemCoupon() async {
+    final code = couponCodeController.text.trim();
+    if (code.isEmpty) {
+      showError(
+        title: 'Coupon',
+        description: 'Please enter a coupon code',
+      );
+      return;
+    }
+    if (code.length != 8) {
+      showError(
+        title: 'Coupon',
+        description: 'Coupon code must be exactly 8 characters',
+      );
+      return;
+    }
+    if (isRedeemingCoupon.value) return;
+
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null) {
+      showError(
+        title: 'Coupon',
+        description: 'No outlet selected. Please try again.',
+      );
+      return;
+    }
+
+    try {
+      isRedeemingCoupon.value = true;
+      final res = await callApi(
+        apiClient.redeemWalletCoupon(outletId, {
+          'userId': userId,
+          'code': code,
+        }),
+        showLoader: false,
+      );
+
+      if (res == null) return;
+
+      if (res is! Map || res['status'] != 'success') {
+        showError(
+          title: 'Coupon',
+          description:
+              res is Map
+                  ? (res['message']?.toString() ?? 'Could not redeem coupon')
+                  : 'Could not redeem coupon',
+        );
+        return;
+      }
+
+      final data = res['data'];
+      if (data is Map) {
+        final wallet = data['wallet'];
+        if (wallet is Map) {
+          _applyWalletPayload({
+            ...Map<String, dynamic>.from(wallet),
+            if (data['transactions'] is List)
+              'transactions': data['transactions'],
+          });
+        } else {
+          await _fetchWallet(outletId, userId);
+        }
+      } else {
+        await _fetchWallet(outletId, userId);
+      }
+
+      if (Get.isRegistered<AppShellSidebarController>()) {
+        final shell = Get.find<AppShellSidebarController>();
+        shell.walletBalance = balance.value;
+        shell.walletLowBalanceThreshold = _lowBalanceThreshold;
+        shell.update(['subscription']);
+      }
+
+      couponCodeController.clear();
+      final credited =
+          (data is Map ? data['creditedAmount'] as num? : null)?.toDouble() ??
+          0;
+      await _showPaymentSuccessDialog(
+        title: 'Coupon applied',
+        description: credited > 0
+            ? '${formatAmount(credited)} added to your wallet'
+            : (res['message']?.toString() ?? 'Wallet credited successfully'),
+      );
+    } catch (e) {
+      debugPrint('Wallet coupon redeem error: $e');
+      showError(
+        title: 'Coupon',
+        description: 'Could not redeem coupon. Please try again.',
+      );
+    } finally {
+      isRedeemingCoupon.value = false;
+    }
   }
 
   Future<void> recharge(double amount, {String? walletCardId}) async {

@@ -36,6 +36,7 @@ import 'package:billkaro/app/services/local_store/local_store_client.dart';
 import 'package:billkaro/app/services/sync/bill_number_allocator.dart';
 import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
@@ -157,29 +158,93 @@ class AddOrderController extends BaseController {
     return type == 'amount' ? 'amount' : 'percentage';
   }
 
-  double _rawDiscountValue() => _asDouble(orderDetails['discount']);
+  double _rawDiscountValue() {
+    if (orderDetails['discountValue'] != null) {
+      return max(0.0, _asDouble(orderDetails['discountValue']));
+    }
+    return max(0.0, _asDouble(orderDetails['discount']));
+  }
 
-  double appliedDiscountAmount() {
+  /// Args for opening Order Details — always includes raw discount type/value.
+  Map<String, dynamic> orderDetailsRouteArgs() {
+    final type = _orderDiscountType();
+    final raw = _rawDiscountValue();
+    return {
+      ...orderDetails,
+      'orderFrom': selectedOrderSource.value,
+      'totalAmount': totalAmount.value,
+      'discountType': type,
+      'discountValue': raw,
+      'discount': raw,
+    };
+  }
+
+  /// Manual discount + promo discount, always in rupees.
+  ///
+  /// Percentage is applied on (subtotal + tax). Amount is a flat ₹ value.
+  double appliedDiscountAmount({double? forSubtotal, double? forTax}) {
+    final s = forSubtotal ?? subtotal.value;
+    final t = forTax ?? totalTax.value;
     final raw = _rawDiscountValue();
     final manual = _orderDiscountType() == 'percentage'
-        ? (subtotal.value + totalTax.value) * raw / 100.0
+        ? (s + t) * min(raw, 100.0) / 100.0
         : raw;
-    return manual + promoDiscountAmount;
+    return max(0.0, manual + promoDiscountAmount);
+  }
+
+  /// Label for summary rows, e.g. "Discount (10%)" or "Discount".
+  String discountSummaryLabel([String fallback = 'Discount']) {
+    final raw = _rawDiscountValue();
+    if (_orderDiscountType() != 'percentage' || raw <= 0) return fallback;
+    final pct = raw == raw.roundToDouble()
+        ? '${raw.toInt()}'
+        : raw.toStringAsFixed(1);
+    return '$fallback ($pct%)';
   }
 
   void _applyDiscountFromOrder(api.OrderModel order) {
     final type = order.discountType?.trim().toLowerCase();
     if (type == 'percentage' || type == 'amount') {
+      final raw = order.discountValue ?? order.discount;
       orderDetails['discountType'] = type;
-      orderDetails['discount'] = order.discountValue ?? order.discount;
-    } else {
-      // Legacy rows: [discount] is the applied rupee amount.
-      orderDetails['discountType'] = 'amount';
-      orderDetails['discount'] = order.discount;
+      orderDetails['discount'] = raw;
+      orderDetails['discountValue'] = raw;
+      return;
+    }
+
+    // Legacy rows with no type: [discount] is the applied rupee amount.
+    orderDetails['discountType'] = 'amount';
+    orderDetails['discount'] = order.discount;
+    orderDetails['discountValue'] = order.discount;
+  }
+
+  /// Prefer local orderJson discountType/value (API does not store them).
+  Future<void> _hydrateDiscountMetaFromLocal() async {
+    final id = orders?.id?.trim();
+    if (id == null || id.isEmpty) return;
+    try {
+      final local = await db.getOrderById(id);
+      if (local == null) return;
+      orders = preserveOrderDiscountMeta(orders!, local);
+      _applyDiscountFromOrder(orders!);
+      orderDetailsVersion.value++;
+    } catch (e) {
+      debugPrint('Failed to hydrate discount meta: $e');
     }
   }
 
-  double serviceChargeAmount() => _asDouble(orderDetails['serviceCharge']);
+  double serviceChargeAmount() => max(0.0, _asDouble(orderDetails['serviceCharge']));
+
+  /// GST applies when the catalog item is marked withTax and has a rate.
+  /// If the catalog item is missing (edit/frozen only), tax when rate > 0.
+  bool _lineChargedTax({
+    required bool isPromo,
+    required double gstRate,
+    bool? itemWithTax,
+  }) {
+    if (isPromo || gstRate <= 0) return false;
+    return itemWithTax ?? true;
+  }
 
   String _normalizePaymentMethod(dynamic value) {
     final method = (value ?? '').toString().trim().toLowerCase();
@@ -303,7 +368,17 @@ class AddOrderController extends BaseController {
   }
 
   void setOrderDetails(Map<String, dynamic> details) {
-    orderDetails = details;
+    orderDetails = Map<String, dynamic>.from(details);
+    // Always keep an explicit type + raw value for Add Details reopen.
+    final type =
+        orderDetails['discountType']?.toString().trim().toLowerCase() ??
+        'percentage';
+    orderDetails['discountType'] = type == 'amount' ? 'amount' : 'percentage';
+    final raw = orderDetails['discountValue'] != null
+        ? max(0.0, _asDouble(orderDetails['discountValue']))
+        : max(0.0, _asDouble(orderDetails['discount']));
+    orderDetails['discount'] = raw;
+    orderDetails['discountValue'] = raw;
     final hasPayment =
         (details['paymentReceivedIn']?.toString().trim().isNotEmpty ?? false) ||
         (details['splitPayments'] is List &&
@@ -419,6 +494,7 @@ class AddOrderController extends BaseController {
     }
 
     if (isEdit.value && orders != null) {
+      await _hydrateDiscountMetaFromLocal();
       _loadOrderForEdit();
       await _syncKotPrintedFromStorage();
     } else {
@@ -444,7 +520,8 @@ class AddOrderController extends BaseController {
         Get.back();
         return;
       }
-      await maybeShowLowStockAlert(appPref: appPref, apiClient: apiClient);
+      // Inventory alert is optional UX — never block order entry.
+      unawaited(maybeShowLowStockAlert(appPref: appPref, apiClient: apiClient));
     });
   }
 
@@ -953,6 +1030,8 @@ class AddOrderController extends BaseController {
           name: cartLineLabel(lineKey),
           unitPrice: cartLineUnitPrice(lineKey),
           quantity: entry.value,
+          gst: isPromo ? 0 : resolved.item.gst.toDouble(),
+          withTax: !isPromo && resolved.item.withTax,
           remark: remark,
           imageUrl: resolved.item.itemImage,
           isPromo: isPromo,
@@ -1029,8 +1108,13 @@ class AddOrderController extends BaseController {
       final item = resolved.item;
       final price = resolved.variant?.salePrice ?? item.salePrice;
       final gstRate = item.gst.toDouble();
-      final withTax = item.withTax || gstRate > 0;
-      if (!withTax) continue;
+      if (!_lineChargedTax(
+        isPromo: false,
+        gstRate: gstRate,
+        itemWithTax: item.withTax,
+      )) {
+        continue;
+      }
       total += price * entry.value * gstRate / 100.0;
     }
     return total;
@@ -1492,6 +1576,8 @@ class AddOrderController extends BaseController {
         subtotal: request.subtotal,
         totalTax: request.totalTax,
         discount: request.discount,
+        discountType: request.discountType ?? _orderDiscountType(),
+        discountValue: request.discountValue ?? _rawDiscountValue(),
         serviceCharge: request.serviceCharge,
         totalAmount: request.totalAmount,
         paymentReceivedIn: request.paymentReceivedIn,
@@ -2677,6 +2763,8 @@ class AddOrderController extends BaseController {
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
       discount: appliedDiscountAmount(),
+      discountType: _orderDiscountType(),
+      discountValue: _rawDiscountValue(),
       serviceCharge: (orderDetails['serviceCharge'] is num)
           ? (orderDetails['serviceCharge'] as num).toDouble()
           : (double.tryParse('${orderDetails['serviceCharge'] ?? 0}') ?? 0.0),
@@ -2820,6 +2908,8 @@ class AddOrderController extends BaseController {
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
       discount: appliedDiscountAmount(),
+      discountType: _orderDiscountType(),
+      discountValue: _rawDiscountValue(),
       serviceCharge: _asDouble(orderDetails['serviceCharge']),
       paymentReceivedIn: orderDetails['paymentReceivedIn'],
       splitPayments: splitPaymentsList,
@@ -2977,6 +3067,8 @@ class AddOrderController extends BaseController {
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
       discount: appliedDiscountAmount(),
+      discountType: _orderDiscountType(),
+      discountValue: _rawDiscountValue(),
       serviceCharge: _asDouble(orderDetails['serviceCharge']),
       paymentReceivedIn: orderDetails['paymentReceivedIn'],
       splitPayments: splitPaymentsList,
@@ -3645,8 +3737,8 @@ class AddOrderController extends BaseController {
       subtotal: r.subtotal ?? 0,
       totalTax: r.totalTax ?? 0,
       discount: r.discount ?? 0,
-      discountType: _orderDiscountType(),
-      discountValue: _rawDiscountValue(),
+      discountType: r.discountType ?? _orderDiscountType(),
+      discountValue: r.discountValue ?? _rawDiscountValue(),
       serviceCharge: r.serviceCharge ?? 0,
       totalAmount: r.totalAmount ?? 0,
       paymentReceivedIn: r.paymentReceivedIn,
@@ -3697,10 +3789,14 @@ class AddOrderController extends BaseController {
       if (price == null) continue;
 
       final gstRate = frozen?.gst ?? resolved?.item.gst.toDouble() ?? 0.0;
-      final withTax = resolved?.item.withTax ?? gstRate > 0;
-
-      final double lineSubtotal = price * qty;
-      final double lineTax = withTax ? (lineSubtotal * gstRate / 100.0) : 0.0;
+      final lineSubtotal = price * qty;
+      final lineTax = _lineChargedTax(
+            isPromo: isPromo,
+            gstRate: gstRate,
+            itemWithTax: resolved?.item.withTax,
+          )
+          ? lineSubtotal * gstRate / 100.0
+          : 0.0;
 
       s += lineSubtotal;
       t += lineTax;
@@ -3709,13 +3805,14 @@ class AddOrderController extends BaseController {
     subtotal.value = s;
     totalTax.value = t;
 
-    final discount = appliedDiscountAmount();
+    final discount = appliedDiscountAmount(forSubtotal: s, forTax: t);
     final serviceCharge = serviceChargeAmount();
 
-    // A discount larger than the bill must not produce a negative payable.
+    // Subtotal + Tax + Service − Discount (never negative).
     totalAmount.value = max(0.0, s + t + serviceCharge - discount);
     debugPrint(
-      'Totals updated -> subtotal: ${subtotal.value}, tax: ${totalTax.value}, total: ${totalAmount.value}',
+      'Totals updated -> subtotal: ${subtotal.value}, tax: ${totalTax.value}, '
+      'discount: $discount, total: ${totalAmount.value}',
     );
   }
 

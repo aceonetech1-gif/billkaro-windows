@@ -1,8 +1,10 @@
+import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/edit_order_widget.dart';
 import 'package:billkaro/utils/staff_access.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -657,10 +659,12 @@ class _OrderCard extends StatelessWidget {
     if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) return;
     EditOrderDialog.show(
       order: order,
-      onUpdate: () {
+      onUpdate: () async {
+        final local = await AppDatabase().getOrderById(order.id);
+        final enriched = preserveOrderDiscountMeta(order, local);
         Modular.to.pushNamed(
           HomeMainRoutes.createOrder,
-          arguments: {'isEdit': true, 'order': order},
+          arguments: {'isEdit': true, 'order': enriched},
         );
 
         // Get.toNamed(

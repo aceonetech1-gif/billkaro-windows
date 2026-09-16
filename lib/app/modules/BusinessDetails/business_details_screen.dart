@@ -113,7 +113,7 @@ class BusinessDetailsScreen extends StatelessWidget {
                                           _DangerCard(
                                             title: loc.delete_outlet,
                                             subtitle:
-                                                'Permanently remove this outlet and its local data.',
+                                                'An OTP is sent to the owner email or phone before this outlet is removed.',
                                             buttonLabel: loc.delete_outlet,
                                             onPressed: controller.deleteOutlet,
                                             compact: true,
@@ -137,7 +137,7 @@ class BusinessDetailsScreen extends StatelessWidget {
                                 _DangerCard(
                                   title: loc.delete_outlet,
                                   subtitle:
-                                      'Permanently remove this outlet and its local data.',
+                                      'An OTP is sent to the owner email or phone before this outlet is removed.',
                                   buttonLabel: loc.delete_outlet,
                                   onPressed: controller.deleteOutlet,
                                 ),

@@ -4,6 +4,9 @@ class DaySessionSummary {
   final double totalTax;
   final double totalDiscount;
   final Map<String, double> paymentBreakdown;
+  final double totalExpenses;
+  final double cashExpenses;
+  final int expenseCount;
 
   DaySessionSummary({
     required this.totalOrders,
@@ -11,6 +14,9 @@ class DaySessionSummary {
     required this.totalTax,
     required this.totalDiscount,
     required this.paymentBreakdown,
+    this.totalExpenses = 0,
+    this.cashExpenses = 0,
+    this.expenseCount = 0,
   });
 
   factory DaySessionSummary.fromJson(Map<String, dynamic>? json) {
@@ -36,6 +42,9 @@ class DaySessionSummary {
       totalTax: (json['totalTax'] as num?)?.toDouble() ?? 0,
       totalDiscount: (json['totalDiscount'] as num?)?.toDouble() ?? 0,
       paymentBreakdown: breakdown,
+      totalExpenses: (json['totalExpenses'] as num?)?.toDouble() ?? 0,
+      cashExpenses: (json['cashExpenses'] as num?)?.toDouble() ?? 0,
+      expenseCount: (json['expenseCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -115,24 +124,33 @@ class LiveDaySummary {
   final DaySessionSummary summary;
   final double expectedCash;
   final double cashSales;
+  final double totalExpenses;
+  final double cashExpenses;
 
   LiveDaySummary({
     required this.session,
     required this.summary,
     required this.expectedCash,
     required this.cashSales,
+    this.totalExpenses = 0,
+    this.cashExpenses = 0,
   });
 
   factory LiveDaySummary.fromJson(Map<String, dynamic> json) {
+    final summary = DaySessionSummary.fromJson(
+      json['summary'] as Map<String, dynamic>?,
+    );
     return LiveDaySummary(
       session: OutletDaySession.fromJson(
         (json['session'] as Map<String, dynamic>?) ?? {},
       ),
-      summary: DaySessionSummary.fromJson(
-        json['summary'] as Map<String, dynamic>?,
-      ),
+      summary: summary,
       expectedCash: (json['expectedCash'] as num?)?.toDouble() ?? 0,
       cashSales: (json['cashSales'] as num?)?.toDouble() ?? 0,
+      totalExpenses:
+          (json['totalExpenses'] as num?)?.toDouble() ?? summary.totalExpenses,
+      cashExpenses:
+          (json['cashExpenses'] as num?)?.toDouble() ?? summary.cashExpenses,
     );
   }
 }

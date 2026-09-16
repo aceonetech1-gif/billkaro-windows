@@ -16,6 +16,8 @@ class CreateorderRequest {
   final double? discount;
   @JsonKey(defaultValue: 'percentage')
   final String? discountType;
+  /// Raw discount entered in UI (before %→₹). Local/hold only — not required by API.
+  final double? discountValue;
   final double? serviceCharge;
   final double? totalAmount;
   final String? paymentReceivedIn;
@@ -36,6 +38,7 @@ class CreateorderRequest {
     this.totalTax,
     this.discount,
     this.discountType,
+    this.discountValue,
     this.serviceCharge,
     this.totalAmount,
     this.paymentReceivedIn,

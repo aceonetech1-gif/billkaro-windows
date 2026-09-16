@@ -48,6 +48,8 @@ CreateorderRequest copyRequestWithBillNumber(
     subtotal: source.subtotal,
     totalTax: source.totalTax,
     discount: source.discount,
+    discountType: source.discountType,
+    discountValue: source.discountValue,
     serviceCharge: source.serviceCharge,
     totalAmount: source.totalAmount,
     paymentReceivedIn: source.paymentReceivedIn,

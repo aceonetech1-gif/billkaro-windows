@@ -312,10 +312,18 @@ abstract class ApiClient {
     @Body() OutletRequest outletRequest,
   );
 
+  @POST('$user/{userId}/outlet/{outletId}/delete/send-otp')
+  Future<dynamic> sendDeleteOutletOtp(
+    @Path('userId') String userId,
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @POST('$user/{userId}/outlet/{outletId}/delete')
   Future<dynamic> deleteOutlet(
     @Path('userId') String userId,
     @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
   );
 
   @PATCH('$user/{id}/outlet/{outletId}')
@@ -707,6 +715,35 @@ abstract class ApiClient {
     @Body() Map<String, dynamic> body,
   );
 
+  // -------------------- EXPENSES --------------------
+
+  @GET('$outlets/{outletId}/$expenses')
+  Future<dynamic> getExpenses(
+    @Path('outletId') String outletId,
+    @Query('startDate') String? startDate,
+    @Query('endDate') String? endDate,
+    @Query('category') String? category,
+  );
+
+  @POST('$outlets/{outletId}/$expenses')
+  Future<dynamic> createExpense(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/$expenses/{id}')
+  Future<dynamic> updateExpense(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$outlets/{outletId}/$expenses/{id}')
+  Future<dynamic> deleteExpense(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+  );
+
   // -------------------- Wallet --------------------
 
   @GET(walletCards)
@@ -726,6 +763,12 @@ abstract class ApiClient {
 
   @POST('$outlets/{outletId}/wallet/recharge/confirm')
   Future<dynamic> confirmWalletRecharge(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('$outlets/{outletId}/wallet/redeem-coupon')
+  Future<dynamic> redeemWalletCoupon(
     @Path('outletId') String outletId,
     @Body() Map<String, dynamic> body,
   );

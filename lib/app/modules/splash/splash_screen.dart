@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
 import 'package:billkaro/app/modules/splash/splash_controller.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
@@ -233,7 +232,7 @@ class SplashScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Powered by Rishabh Kumar',
+                          'Powered by AceOne Universal Tech Pvt Ltd',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.white.withOpacity(0.6),

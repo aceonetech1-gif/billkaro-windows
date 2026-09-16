@@ -189,6 +189,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         _occupiedTablesSection(loc: loc, isDesktop: isDesktop),
                         const SizedBox(height: _sectionGap),
                       ],
+                      if (StaffAccess.canViewInventory) ...[
+                        _lowStockSection(loc),
+                      ],
                       _quickActions(loc, isDesktop: isDesktop),
                       if (StaffAccess.canViewDashboardInsights) ...[
                         const SizedBox(height: _sectionGap),
@@ -445,6 +448,153 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (trailing != null) trailing,
         ],
+      ),
+    );
+  }
+
+  Widget _lowStockSection(AppLocalizations loc) {
+    return Obx(() {
+      final items = controller.lowStockItems;
+      if (items.isEmpty) return const SizedBox.shrink();
+
+      final preview = items.take(5).toList(growable: false);
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(
+            loc.section_low_stock_alerts,
+            subtitle:
+                '${items.length} item${items.length == 1 ? '' : 's'} below minimum',
+            trailing: TextButton(
+              onPressed: () => Modular.to
+                  .pushNamed(HomeMainRoutes.inventory)
+                  .then((_) => controller.loadLowStockItems()),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    loc.view_all,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_forward_ios, size: 12),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
+            child: Column(
+              children: [
+                for (var i = 0; i < preview.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 8),
+                  _lowStockTile(
+                    name: preview[i].name,
+                    current: preview[i].currentStock,
+                    min: preview[i].minStock,
+                    unit: preview[i].unit,
+                  ),
+                ],
+                if (items.length > preview.length) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '+${items.length - preview.length} more',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: _sectionGap),
+        ],
+      );
+    });
+  }
+
+  Widget _lowStockTile({
+    required String name,
+    required double current,
+    required double min,
+    required String unit,
+  }) {
+    String fmt(double v) =>
+        v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Modular.to
+            .pushNamed(HomeMainRoutes.inventory)
+            .then((_) => controller.loadLowStockItems()),
+        borderRadius: BorderRadius.circular(_cardRadius),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(_cardRadius),
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red.shade700,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${fmt(current)} / ${fmt(min)} $unit',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

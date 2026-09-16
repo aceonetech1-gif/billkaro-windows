@@ -1550,12 +1550,7 @@ class _CartPanel extends StatelessWidget {
                           onPressed: () async {
                             final result = await Modular.to.pushNamed(
                               HomeMainRoutes.orderDetails,
-                              arguments: {
-                                ...controller.orderDetails,
-                                'orderFrom':
-                                    controller.selectedOrderSource.value,
-                                'totalAmount': controller.totalAmount.value,
-                              },
+                              arguments: controller.orderDetailsRouteArgs(),
                             );
                             if (result != null &&
                                 result is CreateorderRequest) {
@@ -1677,6 +1672,18 @@ class _CartPanel extends StatelessWidget {
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
+                                  if (line.hasGst)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        line.gstLabel,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ),
                                   if (line.pendingKot > 0 &&
                                       controller.isKotFeatureActive)
                                     Padding(
@@ -1762,7 +1769,7 @@ class _CartPanel extends StatelessWidget {
                             Text(
                               line.isPromo
                                   ? 'FREE'
-                                  : '₹${line.lineTotal.toStringAsFixed(2)}',
+                                  : '₹${line.lineTotalWithGst.toStringAsFixed(2)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
@@ -1791,18 +1798,21 @@ class _CartPanel extends StatelessWidget {
                     'Subtotal',
                     '₹${controller.subtotal.value.toStringAsFixed(2)}',
                   ),
-                  _row(
-                    'Tax',
-                    '₹${controller.totalTax.value.toStringAsFixed(2)}',
-                  ),
-                  _row(
-                    'Discount',
-                    '-₹${controller.appliedDiscountAmount().toStringAsFixed(2)}',
-                  ),
-                  // _row(
-                  //   'Service',
-                  //   '₹${_num(controller.orderDetails['serviceCharge']).toStringAsFixed(2)}',
-                  // ),
+                  if (controller.totalTax.value > 0)
+                    _row(
+                      'Tax',
+                      '₹${controller.totalTax.value.toStringAsFixed(2)}',
+                    ),
+                  if (controller.serviceChargeAmount() > 0)
+                    _row(
+                      'Service Charge',
+                      '₹${controller.serviceChargeAmount().toStringAsFixed(2)}',
+                    ),
+                  if (controller.appliedDiscountAmount() > 0)
+                    _row(
+                      controller.discountSummaryLabel(loc.discount),
+                      '-₹${controller.appliedDiscountAmount().toStringAsFixed(2)}',
+                    ),
                   const SizedBox(height: 6),
                   _row(
                     loc.total_amount,

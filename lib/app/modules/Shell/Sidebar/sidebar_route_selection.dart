@@ -6,6 +6,8 @@ class SidebarRouteSelection {
     required this.addItem,
     required this.orderReport,
     required this.itemReport,
+    required this.expenseReport,
+    required this.dayEndReport,
     required this.storeHistory,
     required this.closedOrders,
     required this.holdOrders,
@@ -22,6 +24,8 @@ class SidebarRouteSelection {
   final bool addItem;
   final bool orderReport;
   final bool itemReport;
+  final bool expenseReport;
+  final bool dayEndReport;
   final bool storeHistory;
   final bool closedOrders;
   final bool holdOrders;
@@ -39,6 +43,8 @@ class SidebarRouteSelection {
       addItem: path.startsWith(HomeMainRoutes.addItem),
       orderReport: path.startsWith(HomeMainRoutes.orderReport),
       itemReport: path.startsWith(HomeMainRoutes.itemsReport),
+      expenseReport: path.startsWith(HomeMainRoutes.expenseReport),
+      dayEndReport: path.startsWith(HomeMainRoutes.dayEndReport),
       storeHistory: path.startsWith(HomeMainRoutes.storeSessionHistory),
       closedOrders: path.startsWith(HomeMainRoutes.closedOrders),
       holdOrders: path.startsWith(HomeMainRoutes.holdOrders),

@@ -465,6 +465,8 @@ class SidebarScrollableNav extends StatelessWidget {
             !currentPath.startsWith(HomeMainRoutes.reports) &&
             !currentPath.startsWith(HomeMainRoutes.orderReport) &&
             !currentPath.startsWith(HomeMainRoutes.itemsReport) &&
+            !currentPath.startsWith(HomeMainRoutes.expenseReport) &&
+            !currentPath.startsWith(HomeMainRoutes.dayEndReport) &&
             !currentPath.startsWith(HomeMainRoutes.storeSessionHistory)) {
           Modular.to.navigate(HomeMainRoutes.reports);
         }
@@ -479,6 +481,17 @@ class SidebarScrollableNav extends StatelessWidget {
           label: loc.item_Reports,
           selected: routes.itemReport,
           targetRoute: HomeMainRoutes.itemsReport,
+        ),
+        if (StaffAccess.canViewExpenses)
+          SidebarChildNavItem(
+            label: 'Expense Report',
+            selected: routes.expenseReport,
+            targetRoute: HomeMainRoutes.expenseReport,
+          ),
+        SidebarChildNavItem(
+          label: 'Day End Report',
+          selected: routes.dayEndReport,
+          targetRoute: HomeMainRoutes.dayEndReport,
         ),
         if (StaffAccess.canViewStoreHistory)
           SidebarChildNavItem(

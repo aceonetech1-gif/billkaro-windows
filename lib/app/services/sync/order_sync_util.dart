@@ -66,6 +66,7 @@ Map<String, dynamic> buildOrderSyncPayload(OrderModel order) {
 
   // Client-only fields for hold/reopen UI — not stored on the server.
   payload.remove('discountValue');
+  payload.remove('discountType');
 
   final items = payload['items'];
   if (items is List) {

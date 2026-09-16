@@ -582,6 +582,8 @@ class SignupController extends BaseController {
     final contactName =
         '${contact['firstName'] ?? ''} ${contact['lastName'] ?? ''}'.trim();
     final contactMobile = contact['mobile']?.toString().trim() ?? '';
+    final password = passwordController.text;
+    final showPassword = false.obs;
 
     final result = await Get.dialog<bool>(
       AlertDialog(
@@ -614,6 +616,7 @@ class SignupController extends BaseController {
               _confirmationRow('Business', businessName),
               _confirmationRow('Brand', brandName),
               _confirmationRow('Email', email),
+              _confirmationPasswordRow(password, showPassword),
               _confirmationRow('Type', businessType),
               _confirmationRow('Address', addressLine),
               _confirmationRow(
@@ -667,6 +670,57 @@ class SignupController extends BaseController {
             child: Text(
               value.isEmpty ? '-' : value,
               style: const TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _confirmationPasswordRow(String password, RxBool showPassword) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 110,
+            child: Text(
+              'Password',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Obx(() {
+              final visible = showPassword.value;
+              final display = password.isEmpty
+                  ? '-'
+                  : (visible ? password : '•' * password.length);
+              return Text(
+                display,
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
+              );
+            }),
+          ),
+          Obx(
+            () => IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              tooltip: showPassword.value ? 'Hide password' : 'Show password',
+              icon: Icon(
+                showPassword.value
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
+                size: 18,
+                color: AppColor.primary,
+              ),
+              onPressed: () => showPassword.value = !showPassword.value,
             ),
           ),
         ],

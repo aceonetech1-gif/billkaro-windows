@@ -38,6 +38,10 @@ class StaffPermissionKeys {
   static const viewReports = 'view_reports';
   static const generateReports = 'generate_reports';
 
+  // Expenses
+  static const viewExpenses = 'view_expenses';
+  static const createExpenses = 'create_expenses';
+
   // Staff
   static const viewStaff = 'view_staff';
   static const createStaff = 'create_staff';
@@ -93,6 +97,8 @@ class StaffPermissionKeys {
     // importExportCustomers,
     viewReports,
     generateReports,
+    viewExpenses,
+    createExpenses,
     viewStaff,
     createStaff,
     updateStaff,
@@ -263,7 +269,7 @@ final List<StaffPermissionGroup> kStaffPermissionGroups = [
       _perm(StaffPermissionKeys.viewSales, 'View sales'),
       _perm(StaffPermissionKeys.createSales, 'Create sales'),
       _perm(StaffPermissionKeys.updateSales, 'Update sales'),
-      // _perm(StaffPermissionKeys.issueRefunds, 'Issue refunds'),
+      _perm(StaffPermissionKeys.issueRefunds, 'Issue refunds'),
       _perm(StaffPermissionKeys.exportSales, 'Export sales'),
     ],
   ),
@@ -292,6 +298,13 @@ final List<StaffPermissionGroup> kStaffPermissionGroups = [
     items: [
       _perm(StaffPermissionKeys.viewReports, 'View reports'),
       _perm(StaffPermissionKeys.generateReports, 'Generate reports'),
+    ],
+  ),
+  StaffPermissionGroup(
+    title: 'Expenses',
+    items: [
+      _perm(StaffPermissionKeys.viewExpenses, 'View expenses'),
+      _perm(StaffPermissionKeys.createExpenses, 'Add / edit expenses'),
     ],
   ),
   StaffPermissionGroup(

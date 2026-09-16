@@ -67,7 +67,7 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
           // tracks reads made while this builder runs, not reads inside the
           // child widgets it returns.
           final lines = controller.cartLines;
-          final totals = _Totals.of(controller);
+          final totals = _Totals.of(controller, loc);
 
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -141,10 +141,11 @@ class _Totals {
     required this.tax,
     required this.serviceCharge,
     required this.discount,
+    required this.discountLabel,
     required this.total,
   });
 
-  factory _Totals.of(AddOrderController controller) {
+  factory _Totals.of(AddOrderController controller, AppLocalizations loc) {
     // `orderDetails` is a plain map; this counter is what signals edits to it.
     controller.orderDetailsVersion.value;
     return _Totals(
@@ -152,6 +153,7 @@ class _Totals {
       tax: controller.totalTax.value,
       serviceCharge: controller.serviceChargeAmount(),
       discount: controller.appliedDiscountAmount(),
+      discountLabel: controller.discountSummaryLabel(loc.discount),
       total: controller.totalAmount.value,
     );
   }
@@ -160,6 +162,7 @@ class _Totals {
   final double tax;
   final double serviceCharge;
   final double discount;
+  final String discountLabel;
   final double total;
 }
 
@@ -473,6 +476,17 @@ class _ItemDescription extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
+        if (line.hasGst)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              line.gstLabel,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
         if (line.hasOfferInfo) ...[
           const SizedBox(height: 4),
           CartLineOfferDetails(
@@ -650,7 +664,7 @@ class _AmountLabel extends StatelessWidget {
       );
     }
     return Text(
-      '₹${line.lineTotal.toStringAsFixed(2)}',
+      '₹${line.lineTotalWithGst.toStringAsFixed(2)}',
       textAlign: TextAlign.right,
       style: Theme.of(
         context,
@@ -748,7 +762,7 @@ class _SummaryFooter extends StatelessWidget {
             _SummaryRow(label: 'Service Charge', value: serviceCharge),
           if (discount != 0)
             _SummaryRow(
-              label: loc.discount,
+              label: totals.discountLabel,
               value: -discount,
               highlight: theme.colorScheme.error,
             ),

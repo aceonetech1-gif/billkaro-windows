@@ -107,6 +107,8 @@ class AppShellSidebarController extends GetxController {
         path.startsWith(HomeMainRoutes.reports) ||
         path.startsWith(HomeMainRoutes.orderReport) ||
         path.startsWith(HomeMainRoutes.itemsReport) ||
+        path.startsWith(HomeMainRoutes.expenseReport) ||
+        path.startsWith(HomeMainRoutes.dayEndReport) ||
         path.startsWith(HomeMainRoutes.storeSessionHistory);
     final isOrdersPath =
         path.startsWith(HomeMainRoutes.closedOrders) ||

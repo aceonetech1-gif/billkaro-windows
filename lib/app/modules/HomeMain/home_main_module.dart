@@ -34,6 +34,8 @@ import 'package:billkaro/app/modules/Regular%20customer/CustomerDetails/customer
 import 'package:billkaro/app/modules/Regular%20customer/CustomerList/customer_list_Screen.dart';
 import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_screen.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_screen.dart';
+import 'package:billkaro/app/modules/Reports/DayEndReport/day_end_report_screen.dart';
+import 'package:billkaro/app/modules/Expenses/expense_report_screen.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_history_screen.dart';
 import 'package:billkaro/app/modules/Reports/reports_screen.dart';
 import 'package:billkaro/app/modules/Staff/Staff%20Activity/staff_activity_screen.dart';
@@ -212,6 +214,20 @@ class HomeMainModule extends Module {
           child: (_) => _staffGatedRoute(
             allowed: StaffAccess.canViewReports,
             child: ItemReportsScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.expenseReport,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewExpenses,
+            child: const ExpenseReportScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.dayEndReport,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewReports,
+            child: const DayEndReportScreen(),
           ),
         ),
         ChildRoute(

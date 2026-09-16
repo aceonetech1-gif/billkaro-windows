@@ -93,4 +93,6 @@ const String inventory = 'inventory';
 const String supplierCheckEmail = 'suppliers/check-email';
 const String supplierCheckPhone = 'suppliers/check-phone';
 const String daySessions = 'day-sessions';
+const String expenses = 'expenses';
 const String walletCards = 'wallet-cards';
+const String walletRedeemCoupon = 'wallet/redeem-coupon';

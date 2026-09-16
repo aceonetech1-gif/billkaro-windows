@@ -4,12 +4,19 @@ import 'package:flutter_modular/flutter_modular.dart';
 
 class ReportsController extends BaseController {
   void navigateToOrderReports() {
-    // Get.toNamed(AppRoute.orderReports);
     Modular.to.pushNamed(HomeMainRoutes.orderReport);
   }
 
   void navigateToItemReports() {
     Modular.to.pushNamed(HomeMainRoutes.itemsReport);
+  }
+
+  void navigateToExpenseReport() {
+    Modular.to.pushNamed(HomeMainRoutes.expenseReport);
+  }
+
+  void navigateToDayEndReport() {
+    Modular.to.pushNamed(HomeMainRoutes.dayEndReport);
   }
 
   void navigateToStoreHistory() {
