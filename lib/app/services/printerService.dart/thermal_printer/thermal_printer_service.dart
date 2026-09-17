@@ -126,6 +126,16 @@ class ThermalPrinterService extends GetxController {
 
   int _receiptWidth() => selectedPaperSize.value.receiptWidthChars;
 
+  PrintBuilder _printBuilder({int? receiptWidth}) {
+    final paper = selectedPaperSize.value;
+    return PrintBuilder(
+      receiptWidth: receiptWidth ?? paper.receiptWidthChars,
+      printAreaDots: paper.printAreaDots,
+      // 104mm: Font B so 64 cols fit even when the head stays at 80mm dots.
+      useCompactFont: paper == ThermalPaperSize.mm104,
+    );
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -1248,7 +1258,7 @@ class ThermalPrinterService extends GetxController {
     }
 
     if (assignedType == 'network') {
-      final builder = PrintBuilder(receiptWidth: _receiptWidth())
+      final builder = _printBuilder()
         ..center()
         ..boldDoubleHeight('BillKaro\n')
         ..text('${role == PrintRole.bill ? 'Bill' : 'KOT'} printer test\n')
@@ -1259,7 +1269,7 @@ class ThermalPrinterService extends GetxController {
       return;
     }
 
-    final builder = PrintBuilder(receiptWidth: _receiptWidth())
+    final builder = _printBuilder()
       ..center()
       ..boldDoubleHeight('BillKaro\n')
       ..text('${role == PrintRole.bill ? 'Bill' : 'KOT'} printer test\n')
@@ -1311,7 +1321,7 @@ class ThermalPrinterService extends GetxController {
     }
 
     final receiptW = _receiptWidth();
-    final builder = PrintBuilder(receiptWidth: receiptW);
+    final builder = _printBuilder(receiptWidth: receiptW);
 
     // Header
     builder
@@ -1484,7 +1494,7 @@ class ThermalPrinterService extends GetxController {
 
     final receiptW = _receiptWidth();
     final cols = _invoiceColumns(receiptW);
-    final builder = PrintBuilder(receiptWidth: receiptW);
+    final builder = _printBuilder(receiptWidth: receiptW);
     // Header
     builder
       ..center()
@@ -1501,90 +1511,107 @@ class ThermalPrinterService extends GetxController {
     if (fssai.isNotEmpty) builder.text('FSSAI: $fssai\n');
     if (phone.isNotEmpty) builder.text('Ph: $phone\n');
 
-    builder.line()
-      ..bold('INVOICE\n')
+    // Left-align before full-width rules — one single rule only (no double wrap).
+    builder
+      ..left()
       ..line()
+      ..center()
+      ..bold('INVOICE\n')
       ..bold('*** $orderFrom ***\n')
       ..text('\n')
       ..left();
 
-    // Bill details (Bill To and Date on separate lines to avoid overlap with long names)
+    // Bill details
     final w = cols.w;
     final billToLine = 'Bill To: $customerName';
     builder.bold(
       '${billToLine.length <= w ? billToLine : billToLine.substring(0, w)}\n',
     );
-    builder.bold('${TextHelper.formatRow('', 'Date: $date', w)}\n');
+    // Keep Date on the left (right-padded Date caused "D" / "ate:" wrap on 4").
+    final dateLine = 'Date: $date';
+    builder.bold(
+      '${dateLine.length <= w ? dateLine : dateLine.substring(0, w)}\n',
+    );
     builder
       ..bold(
         '${TextHelper.formatRow('Payment In: $paymentMode', 'Time: $time', w)}\n',
       )
-      ..text('${TextHelper.formatRow('', 'Invoice No: $invoiceNo', w)}\n')
+      ..text(
+        '${TextHelper.formatRow('', 'Invoice No: $invoiceNo', w)}\n',
+      )
       ..line();
 
-    // Items header (32 chars total for 2" / 58mm paper)
-    final itemHeader =
-        TextHelper.padRight('Item', cols.item) +
-        TextHelper.padRight('Qty', cols.qty) +
-        TextHelper.padRight('Price', cols.price) +
-        TextHelper.padRight('GST', cols.gst) +
-        TextHelper.padLeft('Amount', cols.amount);
+    final itemHeader = TextHelper.invoiceTableRow(
+      item: 'Item',
+      qty: 'Qty',
+      price: 'Price',
+      gst: 'GST',
+      amount: 'Amount',
+      itemW: cols.item,
+      qtyW: cols.qty,
+      priceW: cols.price,
+      gstW: cols.gst,
+      amountW: cols.amount,
+    );
     builder.bold('$itemHeader\n');
 
-    // Items
+    // Items — same padding rules as header so columns stay aligned
     for (var item in items) {
-      String itemName = item.displayName.length > cols.item
-          ? item.displayName.substring(0, cols.item)
-          : item.displayName;
-      String qty = 'x${item.quantity}';
-      String price = item.salePrice.toStringAsFixed(0);
+      final itemName = item.displayName;
+      final qty = 'x${item.quantity}';
+      final price = item.salePrice.toStringAsFixed(0);
       final gstRate = item.gst;
-      String gst = gstRate <= 0
+      final gst = gstRate <= 0
           ? '-'
           : gstRate == gstRate.roundToDouble()
               ? '${gstRate.toInt()}%'
               : '${gstRate.toStringAsFixed(1)}%';
-      if (gst.length > cols.gst) gst = gst.substring(0, cols.gst);
-      String amount = (item.quantity * item.salePrice).toStringAsFixed(2);
+      final amount = (item.quantity * item.salePrice).toStringAsFixed(2);
 
-      String row =
-          TextHelper.padRight(itemName, cols.item) +
-          TextHelper.padRight(qty, cols.qty) +
-          TextHelper.padRight(price, cols.price) +
-          TextHelper.padRight(gst, cols.gst) +
-          TextHelper.padLeft(amount, cols.amount);
+      final row = TextHelper.invoiceTableRow(
+        item: itemName,
+        qty: qty,
+        price: price,
+        gst: gst,
+        amount: amount,
+        itemW: cols.item,
+        qtyW: cols.qty,
+        priceW: cols.price,
+        gstW: cols.gst,
+        amountW: cols.amount,
+      );
       builder.text('$row\n');
     }
 
+    // One single rule, then totals with amounts on the far right.
     builder
       ..line()
+      ..left()
       ..text(
-        '${TextHelper.formatRow('Subtotal', 'Rs${subtotal.toStringAsFixed(2)}', w)}\n',
+        '${TextHelper.moneyRow(label: 'Subtotal', amount: 'Rs${subtotal.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       );
 
     if (totalTax > 0) {
       builder.text(
-        '${TextHelper.formatRow('Tax (GST)', 'Rs${totalTax.toStringAsFixed(2)}', w)}\n',
+        '${TextHelper.moneyRow(label: 'Tax (GST)', amount: 'Rs${totalTax.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       );
     }
     if (serviceCharge > 0) {
       builder.text(
-        '${TextHelper.formatRow('Service Charge', 'Rs${serviceCharge.toStringAsFixed(2)}', w)}\n',
+        '${TextHelper.moneyRow(label: 'Service Charge', amount: 'Rs${serviceCharge.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       );
     }
     if (discount > 0) {
       builder.text(
-        '${TextHelper.formatRow('Discount', '-Rs${discount.toStringAsFixed(2)}', w)}\n',
+        '${TextHelper.moneyRow(label: 'Discount', amount: '-Rs${discount.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       );
     }
 
     builder
-      ..line()
-      ..boldDoubleHeight(
-        '${TextHelper.formatRow('TOTAL', 'Rs${totalAmount.toStringAsFixed(2)}', w)}\n',
+      ..left()
+      ..bold(
+        '${TextHelper.moneyRow(label: 'TOTAL', amount: 'Rs${totalAmount.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       )
-      ..boldNormal('')
-      ..line()
       ..center()
       ..text('\n')
       ..bold('Terms & Conditions\n')
@@ -1686,7 +1713,7 @@ class ThermalPrinterService extends GetxController {
     if (!ok) throw Exception('No bill printer connected');
 
     final receiptW = _receiptWidth();
-    final builder = PrintBuilder(receiptWidth: receiptW);
+    final builder = _printBuilder(receiptWidth: receiptW);
 
     builder
       ..center()
@@ -2005,12 +2032,14 @@ class ThermalPrinterService extends GetxController {
           if (totalTax > 0) _totRow('Tax (GST)', totalTax, t),
           if (serviceCharge > 0) _totRow('Service Charge', serviceCharge, t),
           if (discount > 0) _totRow('Discount', -discount, t),
-          pw.Divider(),
           pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('TOTAL', style: t(s: 11, b: true)),
-              pw.Text(totalAmount.toStringAsFixed(2), style: t(s: 11, b: true)),
+              pw.Expanded(child: pw.Text('TOTAL', style: t(s: 11, b: true))),
+              pw.Text(
+                totalAmount.toStringAsFixed(2),
+                style: t(s: 11, b: true),
+                textAlign: pw.TextAlign.right,
+              ),
             ],
           ),
           pw.SizedBox(height: 10),
@@ -2169,14 +2198,15 @@ class ThermalPrinterService extends GetxController {
               if (serviceCharge > 0)
                 _totRow('Service Charge', serviceCharge, t),
               if (discount > 0) _totRow('Discount', -discount, t),
-              pw.Divider(),
               pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('TOTAL', style: t(s: 11, b: true)),
+                  pw.Expanded(
+                    child: pw.Text('TOTAL', style: t(s: 11, b: true)),
+                  ),
                   pw.Text(
                     totalAmount.toStringAsFixed(2),
                     style: t(s: 11, b: true),
+                    textAlign: pw.TextAlign.right,
                   ),
                 ],
               ),
@@ -2219,10 +2249,13 @@ class ThermalPrinterService extends GetxController {
     pw.TextStyle Function({double s, bool b}) t,
   ) {
     return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(label, style: t()),
-        pw.Text(value.toStringAsFixed(2), style: t()),
+        pw.Expanded(child: pw.Text(label, style: t())),
+        pw.Text(
+          value.toStringAsFixed(2),
+          style: t(),
+          textAlign: pw.TextAlign.right,
+        ),
       ],
     );
   }
@@ -2241,8 +2274,9 @@ class ThermalPrinterService extends GetxController {
     required int totalQuantity,
   }) async {
     final doc = pw.Document();
+    final paper = selectedPaperSize.value;
     final pageFormat = PdfPageFormat(
-      76 * PdfPageFormat.mm,
+      paper.pdfPageWidthMm * PdfPageFormat.mm,
       297 * PdfPageFormat.mm, // finite height; MultiPage paginates if needed
       marginAll: 4 * PdfPageFormat.mm,
     );

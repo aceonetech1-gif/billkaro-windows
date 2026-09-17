@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
@@ -14,6 +15,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
+import 'package:billkaro/utils/connectivity/connectivity_helper.dart';
 import 'package:billkaro/utils/staff_access.dart';
 
 class AddCategoryController extends BaseController {
@@ -28,6 +30,7 @@ class AddCategoryController extends BaseController {
   final isSelectionMode = false.obs;
   final selectedCategoryIds = <String>[].obs;
   final isDeletingCategories = false.obs;
+  final isActive = true.obs;
   AddOrderController? addOrderController;
   MenuItemController? menuItemController;
 
@@ -257,6 +260,7 @@ class AddCategoryController extends BaseController {
     selectedImage.value = null;
     imageUrl.value = '';
     categoryId.value = '';
+    isActive.value = true;
   }
 
   void startEditCategory(CategoryData category) {
@@ -265,6 +269,7 @@ class AddCategoryController extends BaseController {
     categoryId.value = category.id;
     categoryNameController.text = category.categoryName;
     imageUrl.value = category.imageURL;
+    isActive.value = category.isActive;
     // Reset newly picked image when switching between categories.
     selectedImage.value = null;
   }
@@ -288,6 +293,7 @@ class AddCategoryController extends BaseController {
           'outletId': appPref.selectedOutlet!.id,
           'categoryName': categoryNameController.text.trim().toLowerCase(),
           'imageURL': imageUrl.value,
+          'isActive': isActive.value,
         }),
         showLoader: false,
       );
@@ -512,11 +518,17 @@ class AddCategoryController extends BaseController {
           "categoryName": name,
           'outletId': appPref.selectedOutlet!.id,
           'imageURL': imageUrl.value,
+          'isActive': isActive.value,
         }),
       );
       debugPrint('Update response: $response');
 
       if (response != null && response['status'] == 'success') {
+        try {
+          await AppDatabase().updateCategoryIsActive(id, isActive.value);
+        } catch (e) {
+          debugPrint('Local updateCategoryIsActive after form update failed: $e');
+        }
         // Refresh categories in both controllers
         await getCategories(showloader: false);
         await addOrderController?.getCategories();
@@ -533,6 +545,100 @@ class AddCategoryController extends BaseController {
     } catch (e) {
       showError(description: loc.error_updating_category);
       debugPrint('Error in updateCategory: $e');
+    }
+  }
+
+  Future<void> _refreshRelatedCategoriesFromLocal() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+    final cached = await AppDatabase().getCategories(outletId: outletId);
+    addOrderController?.categories.value =
+        cached.where((c) => c.isActive).toList();
+    if (menuItemController != null) {
+      menuItemController!.categories
+        ..clear()
+        ..addAll(cached);
+    }
+  }
+
+  Future<void> toggleCategoryActive(String id, bool active) async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateCategories)) return;
+    final loc = AppLocalizations.of(Get.context!)!;
+    final index = categories.indexWhere((c) => c.id == id);
+    if (index < 0) return;
+
+    final category = categories[index];
+    final previous = category.isActive;
+    if (previous == active) return;
+
+    final updated = category.copyWith(
+      isActive: active,
+      updatedAt: DateTime.now(),
+    );
+
+    // Optimistic UI + local DB update
+    categories[index] = updated;
+    categories.refresh();
+    if (categoryId.value == id) {
+      isActive.value = active;
+    }
+    try {
+      await AppDatabase().updateCategoryIsActive(id, active);
+    } catch (e) {
+      debugPrint('Local updateCategoryIsActive failed: $e');
+      try {
+        await AppDatabase().upsertCategory(updated);
+      } catch (e2) {
+        debugPrint('Local upsertCategory failed: $e2');
+      }
+    }
+    await _refreshRelatedCategoriesFromLocal();
+
+    Future<void> revertLocal() async {
+      categories[index] = category.copyWith(isActive: previous);
+      categories.refresh();
+      if (categoryId.value == id) {
+        isActive.value = previous;
+      }
+      try {
+        await AppDatabase().updateCategoryIsActive(id, previous);
+      } catch (_) {
+        await AppDatabase().upsertCategory(
+          category.copyWith(isActive: previous),
+        );
+      }
+      await _refreshRelatedCategoriesFromLocal();
+    }
+
+    try {
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (!isOnline) return;
+
+      final response = await callApi(
+        apiClient.updateCategory(appPref.selectedOutlet!.id!, id, {
+          'userId': appPref.user!.id,
+          'outletId': appPref.selectedOutlet!.id,
+          'categoryName': category.categoryName,
+          'imageURL': category.imageURL,
+          'isActive': active,
+        }),
+        showLoader: false,
+      );
+
+      if (response != null && response['status'] == 'success') {
+        await AppDatabase().upsertCategory(updated);
+        await _refreshRelatedCategoriesFromLocal();
+        return;
+      }
+
+      await revertLocal();
+      showError(
+        description: response?['message'] ?? loc.failed_to_update_category,
+      );
+    } catch (e) {
+      await revertLocal();
+      showError(description: loc.error_updating_category);
+      debugPrint('Error in toggleCategoryActive: $e');
     }
   }
 
@@ -562,6 +668,7 @@ class AddCategoryController extends BaseController {
         categoryNameController.text = name;
         categoryId.value = id;
         imageUrl.value = image;
+        isActive.value = rawCategory['isActive'] as bool? ?? true;
         selectedImage.value = null;
         return;
       }

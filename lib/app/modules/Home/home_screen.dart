@@ -8,6 +8,8 @@ import 'package:billkaro/app/modules/Home/Widgets/outlet_switcher.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/modules/Expenses/add_expense_dialog.dart';
+import 'package:billkaro/app/modules/Expenses/expenses_controller.dart';
 import 'package:billkaro/app/modules/Items/voice_add_menu_items_bottomsheet.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
@@ -805,6 +807,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   'label': loc.addItems,
                   'onTap': () => Modular.to.pushNamed(HomeMainRoutes.addItem),
                 },
+              if (StaffAccess.canCreateExpenses)
+                {
+                  'icon': Icons.payments_outlined,
+                  'label': 'Add Expenses',
+                  'onTap': _openAddExpenseDialog,
+                },
               if (StaffAccess.canViewInventory)
                 {
                   'icon': Icons.inventory_2_outlined,
@@ -1125,6 +1133,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
+  }
+
+  Future<void> _openAddExpenseDialog() async {
+    final controller = Get.isRegistered<ExpensesController>()
+        ? Get.find<ExpensesController>()
+        : Get.put(ExpensesController());
+    await showAddExpenseDialog(controller);
   }
 
   Widget _createOrderQuickAction(AppLocalizations loc) {

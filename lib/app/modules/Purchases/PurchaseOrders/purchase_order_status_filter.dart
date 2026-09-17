@@ -8,6 +8,7 @@ class PurchaseOrderStatusFilter {
   static const all = 'ALL';
   static const draft = 'DRAFT';
   static const pending = 'PENDING';
+  static const partiallyReceived = 'PARTIALLY_RECEIVED';
   static const received = 'RECEIVED';
   static const cancelled = 'CANCELLED';
 
@@ -15,6 +16,7 @@ class PurchaseOrderStatusFilter {
     all,
     draft,
     pending,
+    partiallyReceived,
     received,
     cancelled,
   ];
@@ -27,9 +29,14 @@ class PurchaseOrderStatusFilter {
         return 'Draft';
       case pending:
         return 'Pending';
+      case partiallyReceived:
+      case 'PARTIAL':
+        return 'Partially Received';
       case received:
+      case 'COMPLETED':
         return 'Received';
       case cancelled:
+      case 'CANCELED':
         return 'Cancelled';
       default:
         return status;
@@ -42,6 +49,9 @@ class PurchaseOrderStatusFilter {
         return const Color(0xFFEF8819);
       case draft:
         return const Color(0xFF546E7A);
+      case partiallyReceived:
+      case 'PARTIAL':
+        return const Color(0xFF3949AB);
       case received:
         return const Color(0xFF2E7D32);
       case cancelled:

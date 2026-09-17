@@ -1052,7 +1052,7 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                 TextButton.icon(
                   onPressed: () {
                     controller.clearComboComponentSearch(reload: false);
-                    controller.seedComboComponentOptions(force: true);
+                    controller.comboOptionItems.clear();
                     _showComboComponentPicker();
                     controller.loadComboComponentOptions();
                   },
@@ -1293,13 +1293,23 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                     ),
                   );
                 }),
-                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: controller.openQuickAddItemDialog,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Create item'),
+                  ),
+                ),
                 Expanded(
                   child: Obx(() {
-                    // Track RxMap so checkbox / qty UI rebuilds on toggle.
+                    // Track Rx so checkbox / qty / pagination UI rebuilds.
                     final selectedQty = controller.comboComponentQuantities;
                     final _ = selectedQty.length;
-                    final __ = controller.comboSearchQuery.value;
+                    final searchQuery = controller.comboSearchQuery.value;
+                    final hasMore = controller.hasMoreComboOptions.value;
+                    final loadingMore =
+                        controller.isLoadingMoreComboOptions.value;
 
                     if (controller.isLoadingComboOptions.value &&
                         controller.comboComponentOptions.isEmpty) {
@@ -1309,31 +1319,79 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                     final options = controller.comboComponentOptions;
                     if (options.isEmpty) {
                       return Center(
-                        child: Text(
-                          controller.comboSearchQuery.value.isEmpty
-                              ? 'No menu items available to add.'
-                              : 'No items match your search.',
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              searchQuery.isEmpty
+                                  ? 'No menu items available to add.'
+                                  : 'No items match your search.',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: controller.openQuickAddItemDialog,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Create item'),
+                            ),
+                          ],
                         ),
                       );
                     }
 
+                    final showFooter = hasMore || loadingMore;
+
                     return Stack(
                       children: [
-                        ListView.separated(
-                          itemCount: options.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final item = options[index];
-                            final selected = selectedQty.containsKey(item.id);
-                            final qty = selectedQty[item.id] ?? 1;
-                            return _buildComboOptionTile(
-                              context,
-                              item: item,
-                              selected: selected,
-                              qty: qty,
-                            );
+                        NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification.metrics.pixels >=
+                                notification.metrics.maxScrollExtent - 80) {
+                              controller.loadMoreComboComponentOptions();
+                            }
+                            return false;
                           },
+                          child: ListView.separated(
+                            itemCount: options.length + (showFooter ? 1 : 0),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              if (index >= options.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  child: Center(
+                                    child: loadingMore
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : TextButton(
+                                            onPressed: controller
+                                                .loadMoreComboComponentOptions,
+                                            child: const Text('Load more'),
+                                          ),
+                                  ),
+                                );
+                              }
+
+                              final item = options[index];
+                              final selected = selectedQty.containsKey(
+                                item.id,
+                              );
+                              final qty = selectedQty[item.id] ?? 1;
+                              return _buildComboOptionTile(
+                                context,
+                                item: item,
+                                selected: selected,
+                                qty: qty,
+                              );
+                            },
+                          ),
                         ),
                         if (controller.isLoadingComboOptions.value)
                           const Positioned(

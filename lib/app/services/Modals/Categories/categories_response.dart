@@ -24,6 +24,8 @@ class CategoryData {
   final String outletId;
   final String categoryName;
   final String imageURL; // Optional field for category image URL
+  @JsonKey(defaultValue: true)
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -35,10 +37,33 @@ class CategoryData {
     required this.imageURL,
     required this.createdAt,
     required this.updatedAt,
+    this.isActive = true,
   });
 
   factory CategoryData.fromJson(Map<String, dynamic> json) =>
       _$CategoryDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$CategoryDataToJson(this);
+
+  CategoryData copyWith({
+    String? id,
+    String? userId,
+    String? outletId,
+    String? categoryName,
+    String? imageURL,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CategoryData(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      outletId: outletId ?? this.outletId,
+      categoryName: categoryName ?? this.categoryName,
+      imageURL: imageURL ?? this.imageURL,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

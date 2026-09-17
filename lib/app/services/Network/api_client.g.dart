@@ -452,8 +452,9 @@ class _ApiClient implements ApiClient {
     String? category,
     String? search,
     bool? showItem,
-    bool? isRecommended,
-  ) async {
+    bool? isRecommended, {
+    bool? isCombo,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'page': page,
@@ -462,6 +463,7 @@ class _ApiClient implements ApiClient {
       r'search': search,
       r'showItem': showItem,
       r'isRecommended': isRecommended,
+      r'isCombo': isCombo,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

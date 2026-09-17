@@ -12,6 +12,8 @@ class CategoriesTable extends Table {
   TextColumn get categoryName => text()();
   TextColumn get imageURL => text()();
 
+  /// 🔹 Whether category is shown in order screens
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
   /// 🔹 Timestamps (stored as ISO string)
   DateTimeColumn get createdAt => dateTime()();

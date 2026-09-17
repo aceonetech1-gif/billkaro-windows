@@ -1386,6 +1386,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get add_raw_material => 'कच्चा माल जोड़ें';
 
   @override
+  String get add_stock => 'स्टॉक जोड़ें';
+
+  @override
   String get edit_raw_material => 'कच्चा माल संपादित करें';
 
   @override

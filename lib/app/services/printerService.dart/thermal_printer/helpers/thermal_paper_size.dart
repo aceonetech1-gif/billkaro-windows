@@ -26,14 +26,28 @@ enum ThermalPaperSize {
 
 extension ThermalPaperSizeX on ThermalPaperSize {
   /// Monospace character width used by [PrintBuilder] and receipt layout.
+  /// Font A (~12 dots/char). 104mm uses 64 (not 68/69) so lines never wrap
+  /// on common 4" clones that still buffer like a wide 80mm head.
   int get receiptWidthChars {
     switch (this) {
       case ThermalPaperSize.mm58:
-        return 32;
+        return 32; // 384 / 12
       case ThermalPaperSize.mm80:
-        return 48;
+        return 48; // 576 / 12
       case ThermalPaperSize.mm104:
         return 64;
+    }
+  }
+
+  /// Approximate printable width in dots (203 dpi). Kept for API compatibility.
+  int get printAreaDots {
+    switch (this) {
+      case ThermalPaperSize.mm58:
+        return 384;
+      case ThermalPaperSize.mm80:
+        return 576;
+      case ThermalPaperSize.mm104:
+        return 832;
     }
   }
 
@@ -44,6 +58,7 @@ extension ThermalPaperSizeX on ThermalPaperSize {
         return PaperSize.mm58;
       case ThermalPaperSize.mm80:
       case ThermalPaperSize.mm104:
+        // Library max is 80 mm / 576 dots; bill text uses [printAreaDots] instead.
         return PaperSize.mm80;
     }
   }
@@ -62,12 +77,16 @@ extension ThermalPaperSizeX on ThermalPaperSize {
   ({int w, int item, int qty, int price, int gst, int amount})
   invoiceColumns() {
     final w = receiptWidthChars;
+    // Sums must equal [w] exactly — any overflow wraps and breaks alignment.
     if (w >= 64) {
-      return (w: w, item: 28, qty: 5, price: 9, gst: 6, amount: 16);
+      // 26+6+10+6+16 = 64
+      return (w: w, item: 26, qty: 6, price: 10, gst: 6, amount: 16);
     }
     if (w >= 48) {
-      return (w: w, item: 20, qty: 5, price: 7, gst: 5, amount: 11);
+      // 18+5+8+5+12 = 48
+      return (w: w, item: 18, qty: 5, price: 8, gst: 5, amount: 12);
     }
+    // 10+4+6+4+8 = 32
     return (w: w, item: 10, qty: 4, price: 6, gst: 4, amount: 8);
   }
 
@@ -79,12 +98,11 @@ extension ThermalPaperSizeX on ThermalPaperSize {
       case ThermalPaperSize.mm80:
         return 9;
       case ThermalPaperSize.mm104:
-        return 11;
+        return 10;
     }
   }
 
   /// Max QR bitmap width so the code fits the printable area with side margin.
-  /// Kept within typical ESC/POS buffer limits while staying large enough to scan.
   int get qrMaxDots {
     switch (this) {
       case ThermalPaperSize.mm58:
@@ -92,14 +110,14 @@ extension ThermalPaperSizeX on ThermalPaperSize {
       case ThermalPaperSize.mm80:
         return 448; // 80mm ≈ 576 dots
       case ThermalPaperSize.mm104:
-        return 560; // 104mm ≈ 832 dots
+        return 512; // keep within common raster buffers
     }
   }
 
   /// Target QR bitmap width in printer dots (snapped to whole modules later).
   int get qrBitmapSize => qrMaxDots;
 
-  /// Native ESC/POS QR module size (1–16; capped at 8 for cheap clone printers).
+  /// Native ESC/POS QR module size (1–16; capped for cheap clone printers).
   int get escPosQrModuleSize {
     switch (this) {
       case ThermalPaperSize.mm58:
@@ -131,7 +149,7 @@ extension ThermalPaperSizeX on ThermalPaperSize {
       case ThermalPaperSize.mm80:
         return 42;
       case ThermalPaperSize.mm104:
-        return 52;
+        return 56;
     }
   }
 }

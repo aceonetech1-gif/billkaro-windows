@@ -65,6 +65,7 @@ class OfflineCategoryLoader {
           outletId: outletId,
           categoryName: name,
           imageURL: '',
+          isActive: true,
           createdAt: now,
           updatedAt: now,
         ),

@@ -2732,6 +2732,21 @@ class $CategoriesTableTable extends CategoriesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2761,6 +2776,7 @@ class $CategoriesTableTable extends CategoriesTable
     outletId,
     categoryName,
     imageURL,
+    isActive,
     createdAt,
     updatedAt,
   ];
@@ -2816,6 +2832,12 @@ class $CategoriesTableTable extends CategoriesTable
     } else if (isInserting) {
       context.missing(_imageURLMeta);
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2861,6 +2883,10 @@ class $CategoriesTableTable extends CategoriesTable
         DriftSqlType.string,
         data['${effectivePrefix}image_u_r_l'],
       )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2891,6 +2917,9 @@ class CategoriesTableData extends DataClass
   final String categoryName;
   final String imageURL;
 
+  /// 🔹 Whether category is shown in order screens
+  final bool isActive;
+
   /// 🔹 Timestamps (stored as ISO string)
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -2900,6 +2929,7 @@ class CategoriesTableData extends DataClass
     required this.outletId,
     required this.categoryName,
     required this.imageURL,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2911,6 +2941,7 @@ class CategoriesTableData extends DataClass
     map['outlet_id'] = Variable<String>(outletId);
     map['category_name'] = Variable<String>(categoryName);
     map['image_u_r_l'] = Variable<String>(imageURL);
+    map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2923,6 +2954,7 @@ class CategoriesTableData extends DataClass
       outletId: Value(outletId),
       categoryName: Value(categoryName),
       imageURL: Value(imageURL),
+      isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2939,6 +2971,7 @@ class CategoriesTableData extends DataClass
       outletId: serializer.fromJson<String>(json['outletId']),
       categoryName: serializer.fromJson<String>(json['categoryName']),
       imageURL: serializer.fromJson<String>(json['imageURL']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2952,6 +2985,7 @@ class CategoriesTableData extends DataClass
       'outletId': serializer.toJson<String>(outletId),
       'categoryName': serializer.toJson<String>(categoryName),
       'imageURL': serializer.toJson<String>(imageURL),
+      'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2963,6 +2997,7 @@ class CategoriesTableData extends DataClass
     String? outletId,
     String? categoryName,
     String? imageURL,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => CategoriesTableData(
@@ -2971,6 +3006,7 @@ class CategoriesTableData extends DataClass
     outletId: outletId ?? this.outletId,
     categoryName: categoryName ?? this.categoryName,
     imageURL: imageURL ?? this.imageURL,
+    isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -2983,6 +3019,7 @@ class CategoriesTableData extends DataClass
           ? data.categoryName.value
           : this.categoryName,
       imageURL: data.imageURL.present ? data.imageURL.value : this.imageURL,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2996,6 +3033,7 @@ class CategoriesTableData extends DataClass
           ..write('outletId: $outletId, ')
           ..write('categoryName: $categoryName, ')
           ..write('imageURL: $imageURL, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3009,6 +3047,7 @@ class CategoriesTableData extends DataClass
     outletId,
     categoryName,
     imageURL,
+    isActive,
     createdAt,
     updatedAt,
   );
@@ -3021,6 +3060,7 @@ class CategoriesTableData extends DataClass
           other.outletId == this.outletId &&
           other.categoryName == this.categoryName &&
           other.imageURL == this.imageURL &&
+          other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3031,6 +3071,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
   final Value<String> outletId;
   final Value<String> categoryName;
   final Value<String> imageURL;
+  final Value<bool> isActive;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -3040,6 +3081,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     this.outletId = const Value.absent(),
     this.categoryName = const Value.absent(),
     this.imageURL = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3050,6 +3092,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     required String outletId,
     required String categoryName,
     required String imageURL,
+    this.isActive = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -3066,6 +3109,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     Expression<String>? outletId,
     Expression<String>? categoryName,
     Expression<String>? imageURL,
+    Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -3076,6 +3120,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
       if (outletId != null) 'outlet_id': outletId,
       if (categoryName != null) 'category_name': categoryName,
       if (imageURL != null) 'image_u_r_l': imageURL,
+      if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3088,6 +3133,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     Value<String>? outletId,
     Value<String>? categoryName,
     Value<String>? imageURL,
+    Value<bool>? isActive,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -3098,6 +3144,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
       outletId: outletId ?? this.outletId,
       categoryName: categoryName ?? this.categoryName,
       imageURL: imageURL ?? this.imageURL,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3122,6 +3169,9 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
     if (imageURL.present) {
       map['image_u_r_l'] = Variable<String>(imageURL.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3142,6 +3192,7 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
           ..write('outletId: $outletId, ')
           ..write('categoryName: $categoryName, ')
           ..write('imageURL: $imageURL, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -5177,6 +5228,7 @@ typedef $$CategoriesTableTableCreateCompanionBuilder =
       required String outletId,
       required String categoryName,
       required String imageURL,
+      Value<bool> isActive,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -5188,6 +5240,7 @@ typedef $$CategoriesTableTableUpdateCompanionBuilder =
       Value<String> outletId,
       Value<String> categoryName,
       Value<String> imageURL,
+      Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -5224,6 +5277,11 @@ class $$CategoriesTableTableFilterComposer
 
   ColumnFilters<String> get imageURL => $composableBuilder(
     column: $table.imageURL,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5272,6 +5330,11 @@ class $$CategoriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5308,6 +5371,9 @@ class $$CategoriesTableTableAnnotationComposer
 
   GeneratedColumn<String> get imageURL =>
       $composableBuilder(column: $table.imageURL, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -5358,6 +5424,7 @@ class $$CategoriesTableTableTableManager
                 Value<String> outletId = const Value.absent(),
                 Value<String> categoryName = const Value.absent(),
                 Value<String> imageURL = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5367,6 +5434,7 @@ class $$CategoriesTableTableTableManager
                 outletId: outletId,
                 categoryName: categoryName,
                 imageURL: imageURL,
+                isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -5378,6 +5446,7 @@ class $$CategoriesTableTableTableManager
                 required String outletId,
                 required String categoryName,
                 required String imageURL,
+                Value<bool> isActive = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -5387,6 +5456,7 @@ class $$CategoriesTableTableTableManager
                 outletId: outletId,
                 categoryName: categoryName,
                 imageURL: imageURL,
+                isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

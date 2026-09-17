@@ -31,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// 🔹 SCHEMA VERSION
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   /// 🔹 MIGRATION STRATEGY (CRITICAL FIX)
   @override
@@ -62,6 +62,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 10) {
         await m.createTable(promotionRulesTable);
+      }
+      if (from < 11) {
+        await _tryAddColumn(m, categoriesTable, categoriesTable.isActive);
       }
     },
     beforeOpen: (details) async {
@@ -878,10 +881,21 @@ class AppDatabase extends _$AppDatabase {
         outletId: Value(category.outletId),
         categoryName: Value(category.categoryName),
         imageURL: Value(category.imageURL),
+        isActive: Value(category.isActive),
         createdAt: Value(category.createdAt),
         updatedAt: Value(category.updatedAt),
       ),
       mode: InsertMode.insertOrReplace,
+    );
+  }
+
+  /// Updates only the active flag for a category in local SQLite.
+  Future<void> updateCategoryIsActive(String id, bool isActive) async {
+    await (update(categoriesTable)..where((tbl) => tbl.id.equals(id))).write(
+      CategoriesTableCompanion(
+        isActive: Value(isActive),
+        updatedAt: Value(DateTime.now()),
+      ),
     );
   }
 
@@ -904,6 +918,7 @@ class AppDatabase extends _$AppDatabase {
               outletId: Value(c.outletId.isNotEmpty ? c.outletId : outletId),
               categoryName: Value(c.categoryName),
               imageURL: Value(c.imageURL),
+              isActive: Value(c.isActive),
               createdAt: Value(c.createdAt),
               updatedAt: Value(c.updatedAt),
             ),
@@ -933,6 +948,7 @@ class AppDatabase extends _$AppDatabase {
             updatedAt: item.updatedAt,
             outletId: item.outletId,
             imageURL: item.imageURL,
+            isActive: item.isActive,
           ),
         )
         .toList();

@@ -2681,6 +2681,12 @@ abstract class AppLocalizations {
   /// **'Add Raw Material'**
   String get add_raw_material;
 
+  /// No description provided for @add_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Stock'**
+  String get add_stock;
+
   /// No description provided for @edit_raw_material.
   ///
   /// In en, this message translates to:

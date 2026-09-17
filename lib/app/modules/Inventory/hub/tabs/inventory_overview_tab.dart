@@ -133,7 +133,7 @@ extension _InventoryOverviewTab on _InventoryHubScreenState {
                 runSpacing: 12,
                 children: [
                   if (StaffAccess.canAdjustStock)
-                    _actionChip(loc.add_raw_material, Icons.add_box, () {
+                    _actionChip(loc.add_stock, Icons.add_box, () {
                       if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) {
                         return;
                       }

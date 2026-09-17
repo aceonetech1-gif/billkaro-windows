@@ -578,6 +578,12 @@ class _ItemCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey.shade400,
+                  size: 22,
+                ),
               ],
             ),
 

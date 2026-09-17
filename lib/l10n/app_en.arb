@@ -514,6 +514,7 @@
   "error_fetching_orders": "Error fetching orders",
   "failed_to_refresh_outlets": "Failed to refresh outlets",
   "add_raw_material": "Add Raw Material",
+  "add_stock": "Add Stock",
   "edit_raw_material": "Edit Raw Material",
   "add_supplier": "Add Supplier",
   "edit_supplier": "Edit Supplier",

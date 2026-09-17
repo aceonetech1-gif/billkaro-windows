@@ -7,6 +7,7 @@ import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_dra
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_display.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_pdf_service.dart';
+import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_status_filter.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_terms.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
@@ -2373,6 +2374,9 @@ Widget _poStatusChip(String status) {
       color = Colors.green;
     case 'CANCELLED':
       color = Colors.red;
+    case 'PARTIALLY_RECEIVED':
+    case 'PARTIAL':
+      color = Colors.indigo;
     case 'PENDING':
     case 'DRAFT':
       color = Colors.orange;
@@ -2387,7 +2391,7 @@ Widget _poStatusChip(String status) {
       border: Border.all(color: color.withValues(alpha: 0.4)),
     ),
     child: Text(
-      status,
+      PurchaseOrderStatusFilter.labelOf(status),
       style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
     ),
   );
@@ -2482,6 +2486,8 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
     'Description',
     'HSN/SAC\nCode',
     'Qty',
+    'Received',
+    'Pending',
     'UOM',
     'Delivery\nDate',
     'Rate Per\nUnit',
@@ -2498,13 +2504,15 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
     2: FlexColumnWidth(2.0),
     3: FlexColumnWidth(1.0),
     4: FlexColumnWidth(0.7),
-    5: FlexColumnWidth(0.7),
-    6: FlexColumnWidth(1.1),
-    7: FlexColumnWidth(1.1),
+    5: FlexColumnWidth(0.8),
+    6: FlexColumnWidth(0.8),
+    7: FlexColumnWidth(0.7),
     8: FlexColumnWidth(1.1),
-    9: FlexColumnWidth(0.8),
-    10: FlexColumnWidth(1.0),
-    11: FlexColumnWidth(1.1),
+    9: FlexColumnWidth(1.1),
+    10: FlexColumnWidth(1.1),
+    11: FlexColumnWidth(0.8),
+    12: FlexColumnWidth(1.0),
+    13: FlexColumnWidth(1.1),
   };
 
   Widget cell(
@@ -2527,7 +2535,7 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
 
   return LayoutBuilder(
     builder: (context, constraints) {
-      const minTableWidth = 900.0;
+      const minTableWidth = 1040.0;
       final available = constraints.maxWidth.isFinite
           ? constraints.maxWidth
           : MediaQuery.of(context).size.width;
@@ -2565,6 +2573,8 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
                       cell(desc),
                       cell(line.hsnSacCode.isEmpty ? '—' : line.hsnSacCode),
                       cell(_poFmtNum(line.quantity)),
+                      cell(_poFmtNum(line.receivedQuantity)),
+                      cell(_poFmtNum(line.pendingQuantity)),
                       cell(line.unit),
                       cell(delivery),
                       cell(_poFmtMoney(line.unitPrice)),

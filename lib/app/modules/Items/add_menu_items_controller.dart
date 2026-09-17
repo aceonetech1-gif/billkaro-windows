@@ -48,6 +48,10 @@ class AddMenuItemController extends BaseController {
   final comboSearchController = TextEditingController();
   final RxString comboSearchQuery = ''.obs;
   final isLoadingComboOptions = false.obs;
+  final isLoadingMoreComboOptions = false.obs;
+  final hasMoreComboOptions = true.obs;
+  final comboOptionsPage = 1.obs;
+  static const comboOptionsPageSize = 50;
   Timer? _comboSearchDebounce;
   static const _comboSearchDebounceDuration = Duration(milliseconds: 400);
   int _comboOptionsRequestId = 0;
@@ -1298,73 +1302,147 @@ class AddMenuItemController extends BaseController {
         cached.addAll(menu.items);
       }
     }
-    if (cached.isNotEmpty) {
-      _rememberComboOptions(cached);
-      comboOptionItems.assignAll(cached);
-    }
+    if (cached.isEmpty) return;
+
+    final pageItems = cached
+        .where(
+          (item) =>
+              item.id.isNotEmpty && item.id != itemId.value && !item.isCombo,
+        )
+        .take(comboOptionsPageSize)
+        .toList();
+    _rememberComboOptions(pageItems);
+    comboOptionItems.assignAll(pageItems);
+    hasMoreComboOptions.value = cached.length > pageItems.length;
+    comboOptionsPage.value = 1;
   }
 
-  Future<void> loadComboComponentOptions({String? search}) async {
+  Future<void> loadComboComponentOptions({
+    String? search,
+    bool append = false,
+  }) async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
 
-    final query = (search ?? comboSearchQuery.value).trim();
-    if (query.isEmpty) {
-      seedComboComponentOptions();
+    if (append) {
+      if (!hasMoreComboOptions.value ||
+          isLoadingMoreComboOptions.value ||
+          isLoadingComboOptions.value) {
+        return;
+      }
+      isLoadingMoreComboOptions.value = true;
+    } else {
+      comboOptionsPage.value = 1;
+      hasMoreComboOptions.value = true;
+      final query = (search ?? comboSearchQuery.value).trim();
+      if (query.isEmpty && comboOptionItems.isEmpty) {
+        seedComboComponentOptions(force: true);
+      }
+      if (comboOptionItems.isEmpty || query.isNotEmpty) {
+        isLoadingComboOptions.value = true;
+      }
+      if (query.isNotEmpty) {
+        comboOptionItems.clear();
+      }
     }
 
+    final query = (search ?? comboSearchQuery.value).trim();
+    final page = append ? comboOptionsPage.value + 1 : 1;
     final requestId = ++_comboOptionsRequestId;
-    final hadCachedOptions = comboOptionItems.isNotEmpty && query.isEmpty;
-    if (!hadCachedOptions) {
-      isLoadingComboOptions.value = true;
-    }
+
     try {
       final isOnline = await NetworkUtils.hasInternetConnection();
       if (isOnline) {
         final response = await callApi(
           apiClient.getItems(
             outletId,
-            1,
-            200,
+            page,
+            comboOptionsPageSize,
             null,
             query.isEmpty ? null : query,
             null,
             null,
+            isCombo: false, // non-combo items only for meal components
           ),
           showLoader: false,
         );
         if (requestId != _comboOptionsRequestId) return;
         if (response?.status == 'success') {
-          _rememberComboOptions(response!.data);
-          comboOptionItems.assignAll(response.data);
+          final newItems = response!.data;
+          _rememberComboOptions(newItems);
+          _applyComboOptionsPage(
+            newItems,
+            append: append,
+            page: page,
+            pagination: response.pagination,
+          );
           return;
         }
       }
 
+      final offset = append ? comboOptionItems.length : 0;
       final local = await AppDatabase().getItemsPage(
         outletId: outletId,
-        limit: 100,
+        limit: comboOptionsPageSize,
+        offset: offset,
         searchQuery: query.isEmpty ? null : query,
       );
       if (requestId != _comboOptionsRequestId) return;
-      _rememberComboOptions(local.items);
-      comboOptionItems.assignAll(local.items);
+      final filtered = local.items
+          .where((item) => item.id != itemId.value && !item.isCombo)
+          .toList();
+      _rememberComboOptions(filtered);
+      _applyComboOptionsPage(
+        filtered,
+        append: append,
+        page: page,
+        hasMoreOverride: local.hasMore,
+      );
     } finally {
       if (requestId == _comboOptionsRequestId) {
         isLoadingComboOptions.value = false;
+        isLoadingMoreComboOptions.value = false;
       }
     }
+  }
+
+  void _applyComboOptionsPage(
+    List<ItemData> newItems, {
+    required bool append,
+    required int page,
+    PaginationMeta? pagination,
+    bool? hasMoreOverride,
+  }) {
+    if (append) {
+      final existingIds = comboOptionItems.map((item) => item.id).toSet();
+      comboOptionItems.addAll(
+        newItems.where((item) => !existingIds.contains(item.id)),
+      );
+      comboOptionsPage.value = page;
+    } else {
+      comboOptionItems.assignAll(newItems);
+      comboOptionsPage.value = 1;
+    }
+
+    if (hasMoreOverride != null) {
+      hasMoreComboOptions.value = hasMoreOverride;
+    } else if (pagination != null) {
+      final current = pagination.currentPage ?? page;
+      final total = pagination.totalPages ?? current;
+      hasMoreComboOptions.value = current < total;
+    } else {
+      hasMoreComboOptions.value = newItems.length >= comboOptionsPageSize;
+    }
+  }
+
+  Future<void> loadMoreComboComponentOptions() async {
+    await loadComboComponentOptions(append: true);
   }
 
   void filterComboComponentOptions(String query) {
     final trimmed = query.trim();
     comboSearchQuery.value = trimmed;
     _comboSearchDebounce?.cancel();
-    if (trimmed.isEmpty) {
-      seedComboComponentOptions(force: true);
-      loadComboComponentOptions(search: '');
-      return;
-    }
     _comboSearchDebounce = Timer(_comboSearchDebounceDuration, () {
       loadComboComponentOptions(search: trimmed);
     });
@@ -1376,9 +1454,23 @@ class AddMenuItemController extends BaseController {
     comboSearchController.clear();
     comboSearchQuery.value = '';
     if (reload) {
-      seedComboComponentOptions(force: true);
       loadComboComponentOptions(search: '');
     }
+  }
+
+  /// Opens the shared Quick Add Item dialog, then refreshes meal-item options.
+  Future<void> openQuickAddItemDialog() async {
+    if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
+
+    if (!Get.isRegistered<AddOrderController>()) {
+      Get.put(AddOrderController());
+    }
+
+    await Get.find<AddOrderController>().showQuickAddItemBottomSheet(
+      initialCategory: 'none',
+    );
+
+    await loadComboComponentOptions();
   }
 
   List<ComboComponent> get selectedComboComponents => comboComponentQuantities

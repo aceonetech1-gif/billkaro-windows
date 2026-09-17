@@ -106,8 +106,9 @@ abstract class ApiClient {
     @Query('category') String? category,
     @Query('search') String? search,
     @Query('showItem') bool? showItem,
-    @Query('isRecommended') bool? isRecommended,
-  );
+    @Query('isRecommended') bool? isRecommended, {
+    @Query('isCombo') bool? isCombo,
+  });
 
   @PATCH('$items/{id}')
   Future<dynamic> updateItem(@Body() ItemRequest item, @Path('id') String id);

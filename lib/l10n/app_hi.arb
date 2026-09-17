@@ -514,6 +514,7 @@
   "error_fetching_orders": "ऑर्डर लाने में त्रुटि",
   "failed_to_refresh_outlets": "आउटलेट रिफ्रेश करने में विफल",
   "add_raw_material": "कच्चा माल जोड़ें",
+  "add_stock": "स्टॉक जोड़ें",
   "edit_raw_material": "कच्चा माल संपादित करें",
   "add_supplier": "आपूर्तिकर्ता जोड़ें",
   "edit_supplier": "आपूर्तिकर्ता संपादित करें",

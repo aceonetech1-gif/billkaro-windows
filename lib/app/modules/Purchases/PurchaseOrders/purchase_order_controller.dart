@@ -77,10 +77,17 @@ class PurchaseOrderController extends BaseController {
     }
   }
 
-  Future<bool> receivePurchaseOrder(String poId) async {
+  Future<bool> receivePurchaseOrder(
+    String poId, {
+    List<Map<String, dynamic>>? items,
+  }) async {
     if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
+    final body = <String, dynamic>{
+      'userId': userId,
+      if (items != null) 'items': items,
+    };
     final res = await callApi(
-      apiClient.receivePurchaseOrder(outletId, poId, {'userId': userId}),
+      apiClient.receivePurchaseOrder(outletId, poId, body),
     );
     if (res != null) {
       await loadPurchaseOrders();
@@ -321,7 +328,11 @@ class PurchaseOrderController extends BaseController {
 
   Future<bool> cancelOrder(String id) => cancelPurchaseOrder(id);
 
-  Future<bool> receiveOrder(String id) => receivePurchaseOrder(id);
+  Future<bool> receiveOrder(
+    String id, {
+    List<Map<String, dynamic>>? items,
+  }) =>
+      receivePurchaseOrder(id, items: items);
 
   void confirmCancelPo(
     String name,

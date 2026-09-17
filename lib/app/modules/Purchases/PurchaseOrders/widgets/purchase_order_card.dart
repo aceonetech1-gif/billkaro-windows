@@ -1,5 +1,7 @@
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_controller.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_pdf_service.dart';
+import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_receive_dialog.dart';
+import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_status_filter.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_ui_actions.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/config/config.dart';
@@ -20,7 +22,11 @@ class PurchaseOrderCard extends StatelessWidget {
   static const _radius = 14.0;
   static const _previewLimit = 3;
 
-  bool get _canReceive => po.status == 'PENDING' || po.status == 'DRAFT';
+  bool get _isOpen =>
+      po.status == 'PENDING' ||
+      po.status == 'DRAFT' ||
+      po.status == 'PARTIALLY_RECEIVED';
+  bool get _canEdit => po.status == 'PENDING' || po.status == 'DRAFT';
   bool get _canMutate => StaffAccess.canAdjustStock;
 
   Color get _statusColor => _PoStatusStyle.colorOf(po.status);
@@ -61,7 +67,7 @@ class PurchaseOrderCard extends StatelessWidget {
                           _Header(
                             orderNumber: po.orderNumber,
                             amount: controller.formatAmount(po.totalAmount),
-                            status: po.status,
+                            status: PurchaseOrderStatusFilter.labelOf(po.status),
                             statusColor: _statusColor,
                           ),
                           const SizedBox(height: 10),
@@ -85,9 +91,9 @@ class PurchaseOrderCard extends StatelessWidget {
                           const SizedBox(height: 8),
                           _Actions(
                             loc: loc,
-                            canEdit: _canReceive && _canMutate,
-                            canCancel: _canReceive && _canMutate,
-                            canReceive: _canReceive && _canMutate,
+                            canEdit: _canEdit && _canMutate,
+                            canCancel: _isOpen && _canMutate,
+                            canReceive: _isOpen && _canMutate,
                             onEdit: () => controller.openEditDrawer(po),
                             onDetails: () => controller.openDetails(po),
                             onPrint: () => PurchaseOrderPdfService.printOrPreview(
@@ -102,7 +108,8 @@ class PurchaseOrderCard extends StatelessWidget {
                               () => controller.cancelOrder(po.id),
                               loc,
                             ),
-                            onReceive: () => controller.receiveOrder(po.id),
+                            onReceive: () =>
+                                showReceivePurchaseOrderDialog(controller, po),
                           ),
                         ],
                       ),
@@ -333,11 +340,15 @@ class _LineRow extends StatelessWidget {
 
   final PurchaseOrderLineData line;
 
+  String _fmt(double value) => value == value.roundToDouble()
+      ? '${value.round()}'
+      : value.toStringAsFixed(2);
+
   @override
   Widget build(BuildContext context) {
-    final qty = line.quantity == line.quantity.roundToDouble()
-        ? '${line.quantity.round()}'
-        : '${line.quantity}';
+    final qtyLabel = line.receivedQuantity > 0
+        ? '${_fmt(line.receivedQuantity)}/${_fmt(line.quantity)} ${line.unit}'
+        : '${_fmt(line.quantity)} ${line.unit}';
     final price = line.unitPrice == line.unitPrice.roundToDouble()
         ? '${line.unitPrice.round()}'
         : line.unitPrice.toStringAsFixed(2);
@@ -367,7 +378,7 @@ class _LineRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          '$qty ${line.unit}',
+          qtyLabel,
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,

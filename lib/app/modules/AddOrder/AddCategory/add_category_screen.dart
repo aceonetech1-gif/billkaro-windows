@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:billkaro/app/Widgets/switch_with_on_off_label.dart';
 import 'package:billkaro/app/modules/AddOrder/AddCategory/add_category_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/widgets.dart' show Image;
@@ -296,19 +297,96 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                subtitle: selectionMode
+                                    ? null
+                                    : Text(
+                                        cat.isActive
+                                            ? loc.status_active_label
+                                            : loc.status_inactive_label,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: cat.isActive
+                                              ? Colors.green.shade700
+                                              : Colors.red.shade700,
+                                        ),
+                                      ),
                                 trailing: selectionMode
                                     ? null
-                                    : StaffAccess.canDeleteCategories
-                                    ? IconButton(
-                                        tooltip: loc.delete,
-                                        icon: Assets.svg.delete.svg(
-                                          width: 20,
-                                          height: 20,
+                                    : (StaffAccess.canUpdateCategories ||
+                                          StaffAccess.canDeleteCategories)
+                                    ? PopupMenuButton<String>(
+                                        icon: Icon(
+                                          Icons.more_vert,
+                                          size: 20,
+                                          color: Colors.grey.shade700,
                                         ),
-                                        onPressed: () => _confirmDeleteCategory(
-                                          index,
-                                          cat.categoryName,
-                                        ),
+                                        tooltip: loc.more_options,
+                                        onSelected: (value) {
+                                          if (value == 'toggle') {
+                                            if (!StaffAccess.ensure(
+                                              StaffAccess.canUpdateCategories,
+                                            )) {
+                                              return;
+                                            }
+                                            controller.toggleCategoryActive(
+                                              cat.id,
+                                              !cat.isActive,
+                                            );
+                                          } else if (value == 'delete') {
+                                            _confirmDeleteCategory(
+                                              index,
+                                              cat.categoryName,
+                                            );
+                                          }
+                                        },
+                                        itemBuilder: (context) => [
+                                          if (StaffAccess.canUpdateCategories)
+                                            PopupMenuItem(
+                                              value: 'toggle',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    cat.isActive
+                                                        ? Icons
+                                                              .visibility_off_outlined
+                                                        : Icons
+                                                              .visibility_outlined,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Text(
+                                                    cat.isActive
+                                                        ? loc
+                                                              .status_inactive_label
+                                                        : loc
+                                                              .status_active_label,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          if (StaffAccess.canDeleteCategories)
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.delete_outline,
+                                                    size: 18,
+                                                    color: Colors.red.shade400,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Text(
+                                                    loc.delete,
+                                                    style: TextStyle(
+                                                      color:
+                                                          Colors.red.shade400,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
                                       )
                                     : null,
                               );
@@ -504,6 +582,46 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                     ),
                     const SizedBox(height: 8),
                     buildCategoryImagePicker(),
+                    const SizedBox(height: 14),
+                    Obx(
+                      () => Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  loc.status_active_label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  controller.isActive.value
+                                      ? 'Category is visible on order screens'
+                                      : 'Category is hidden from order screens',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SwitchWithOnOffLabel(
+                            value: controller.isActive.value,
+                            adaptive: true,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            onChanged: (value) =>
+                                controller.isActive.value = value,
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,

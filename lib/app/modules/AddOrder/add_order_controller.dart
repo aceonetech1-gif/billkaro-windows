@@ -1961,7 +1961,7 @@ class AddOrderController extends BaseController {
     showQuickAddItemBottomSheet(initialCategory: itemCategory);
   }
 
-  void showQuickAddItemBottomSheet({String? initialCategory}) {
+  Future<void> showQuickAddItemBottomSheet({String? initialCategory}) async {
     if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
     if (initialCategory != null) {
       quickAddCategory.value = initialCategory.toLowerCase() == 'none'
@@ -1972,7 +1972,7 @@ class AddOrderController extends BaseController {
           ? 'none'
           : selectedCategory.value.toLowerCase();
     }
-    Get.dialog(
+    await Get.dialog(
       Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -2362,7 +2362,7 @@ class AddOrderController extends BaseController {
         outletId: outletId,
         fetchFromApi: () => callApi(apiClient.getCategories(outletId)),
       );
-      categories.value = loaded;
+      categories.value = loaded.where((c) => c.isActive).toList();
       dismissAllAppLoader();
     } catch (e, st) {
       debugPrint('getCategories error: $e\n$st');

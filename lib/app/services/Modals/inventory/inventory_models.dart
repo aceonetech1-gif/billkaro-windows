@@ -531,6 +531,12 @@ class PurchaseOrderLineData {
     this.plant = '',
   });
 
+  /// Ordered qty still awaiting delivery from supplier.
+  double get pendingQuantity {
+    final pending = quantity - receivedQuantity;
+    return pending > 0 ? pending : 0;
+  }
+
   factory PurchaseOrderLineData.fromJson(
     Map<String, dynamic> json, {
     int lineIndex = 0,

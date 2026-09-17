@@ -414,6 +414,8 @@ class PurchaseOrderPdfService {
         'Description',
         'HSN/SAC\nCode',
         'Qty',
+        'Received',
+        'Pending',
         'UOM',
         'Delivery\nDate',
         'Rate Per\nUnit',
@@ -447,6 +449,14 @@ class PurchaseOrderPdfService {
                   line.hsnSacCode.isEmpty ? '-' : _pdfText(line.hsnSacCode),
                 ),
                 tableCell(_fmtNum(line.quantity), align: pw.TextAlign.right),
+                tableCell(
+                  _fmtNum(line.receivedQuantity),
+                  align: pw.TextAlign.right,
+                ),
+                tableCell(
+                  _fmtNum(line.pendingQuantity),
+                  align: pw.TextAlign.right,
+                ),
                 tableCell(_pdfText(line.unit)),
                 tableCell(delivery),
                 tableCell(
@@ -661,12 +671,12 @@ class PurchaseOrderPdfService {
   ) {
     final weights = isLandscape
         ? [
-            0.05, 0.13, 0.14, 0.07, 0.05, 0.05, 0.08, 0.09, 0.09, 0.05, 0.09,
-            0.11,
+            0.04, 0.11, 0.12, 0.06, 0.045, 0.05, 0.05, 0.045, 0.07, 0.075,
+            0.075, 0.045, 0.075, 0.09,
           ]
         : [
-            0.055, 0.12, 0.12, 0.075, 0.055, 0.055, 0.085, 0.085, 0.085, 0.055,
-            0.09, 0.105,
+            0.045, 0.10, 0.10, 0.06, 0.05, 0.055, 0.055, 0.05, 0.07, 0.07,
+            0.07, 0.05, 0.075, 0.09,
           ];
     final sum = weights.fold<double>(0, (total, w) => total + w);
     return {
@@ -681,6 +691,9 @@ class PurchaseOrderPdfService {
         return PdfColors.green;
       case 'CANCELLED':
         return PdfColors.red;
+      case 'PARTIALLY_RECEIVED':
+      case 'PARTIAL':
+        return PdfColors.indigo;
       case 'PENDING':
       case 'DRAFT':
         return PdfColors.orange;

@@ -1381,6 +1381,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get add_raw_material => 'Add Raw Material';
 
   @override
+  String get add_stock => 'Add Stock';
+
+  @override
   String get edit_raw_material => 'Edit Raw Material';
 
   @override
