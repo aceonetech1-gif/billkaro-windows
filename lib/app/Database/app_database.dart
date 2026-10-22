@@ -376,14 +376,54 @@ class AppDatabase extends _$AppDatabase {
     }
 
     final orderRows = await query.get();
-    final List<OrderModel> result = [];
+    return _orderRowsToModels(orderRows);
+  }
 
-    for (final order in orderRows) {
-      debugPrint('📦 Order Status:${order.id} ${order.isSync}');
-      result.add(await _orderRowToModel(order));
+  /// Home dashboard: active (open) orders + newest closed orders only.
+  /// Avoids loading the full historical order table into memory on every paint.
+  Future<({List<OrderModel> active, List<OrderModel> closed})>
+  getOrdersForHomeDashboard({
+    required String outletId,
+    int closedLimit = 800,
+  }) async {
+    final activeRows =
+        await (select(orders)..where(
+              (tbl) =>
+                  tbl.outletId.equals(outletId) &
+                  tbl.status.lower().isNotValue('closed') &
+                  tbl.status.lower().isNotValue('deleted'),
+            ))
+            .get();
+
+    final closedRows =
+        await (select(orders)
+              ..where(
+                (tbl) =>
+                    tbl.outletId.equals(outletId) &
+                    tbl.status.lower().equals('closed'),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+              ..limit(closedLimit))
+            .get();
+
+    final active = await _orderRowsToModels(activeRows);
+    final closed = await _orderRowsToModels(closedRows);
+    return (active: active, closed: closed);
+  }
+
+  Future<List<OrderModel>> _orderRowsToModels(List<Order> orderRows) async {
+    if (orderRows.isEmpty) return const [];
+
+    // Parallel batches keep the UI isolate responsive on large outlets.
+    const batchSize = 48;
+    final result = <OrderModel>[];
+    for (var i = 0; i < orderRows.length; i += batchSize) {
+      final end = (i + batchSize < orderRows.length)
+          ? i + batchSize
+          : orderRows.length;
+      final batch = orderRows.sublist(i, end);
+      result.addAll(await Future.wait(batch.map(_orderRowToModel)));
     }
-
-    debugPrint('✅ Orders loaded: ${result.length}');
     return result;
   }
 
@@ -446,10 +486,7 @@ class AppDatabase extends _$AppDatabase {
     final hasMore = orderRows.length > limit;
     final slice = hasMore ? orderRows.sublist(0, limit) : orderRows;
 
-    final List<OrderModel> items = [];
-    for (final order in slice) {
-      items.add(await _orderRowToModel(order));
-    }
+    final items = await _orderRowsToModels(slice);
     return (items: items, hasMore: hasMore);
   }
 

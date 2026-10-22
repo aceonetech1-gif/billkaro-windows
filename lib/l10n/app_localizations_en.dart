@@ -2094,6 +2094,71 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show UPI scan-to-pay QR on invoice and print';
 
   @override
+  String get show_logo_on_bill => 'Show logo on bill';
+
+  @override
+  String get show_logo_on_bill_subtitle =>
+      'Show business logo on invoice and print';
+
+  @override
+  String get show_outlet_name_on_bill => 'Show outlet name on bill';
+
+  @override
+  String get show_outlet_name_on_bill_subtitle =>
+      'Print the outlet name under the brand name';
+
+  @override
+  String get show_bill_header => 'Show header on bill';
+
+  @override
+  String get show_bill_header_subtitle =>
+      'Print the bill header message at the top';
+
+  @override
+  String get show_bill_footer => 'Show footer on bill';
+
+  @override
+  String get show_bill_footer_subtitle =>
+      'Print the bill footer message after the total';
+
+  @override
+  String get show_gst_split_on_bill => 'Show CGST & SGST on bill';
+
+  @override
+  String get show_gst_split_on_bill_subtitle =>
+      'Split GST into CGST and SGST (only when the outlet has a GSTIN)';
+
+  @override
+  String get bill_header_footer => 'Bill header & footer';
+
+  @override
+  String get bill_header_footer_subtitle =>
+      'Custom messages printed at the top and bottom of the bill';
+
+  @override
+  String get bill_header_message => 'Header message';
+
+  @override
+  String get bill_header_message_hint => 'e.g. Welcome! Pure veg restaurant';
+
+  @override
+  String get bill_footer_message => 'Footer message';
+
+  @override
+  String get bill_footer_message_hint =>
+      'e.g. Visit again! Goods once sold will not be taken back';
+
+  @override
+  String get bill_header_footer_saved => 'Bill header & footer saved';
+
+  @override
+  String get enable_inventory => 'Inventory management';
+
+  @override
+  String get enable_inventory_subtitle =>
+      'Enable stock, suppliers, recipes and purchase orders';
+
+  @override
   String get add_details_on_create_order => 'Add details on create order';
 
   @override

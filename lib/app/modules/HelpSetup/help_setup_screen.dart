@@ -1,15 +1,61 @@
+import 'dart:io';
+
+import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/Network/api_client.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class HelpSetupScreen extends StatelessWidget {
-  HelpSetupScreen({super.key});
+class HelpSetupScreen extends StatefulWidget {
+  const HelpSetupScreen({super.key});
 
+  @override
+  State<HelpSetupScreen> createState() => _HelpSetupScreenState();
+}
+
+class _HelpSetupScreenState extends State<HelpSetupScreen> {
   static const _supportPhone = '+919582222724';
   static const _whatsappPhone = '916364444752';
   // static const _liveChatWhatsapp = '9350413656';
   static const _supportEmail = 'support@bill-kro.com';
 
   final AppPref _appPref = Get.find<AppPref>();
+  late String _displayUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayUserId = _formatCustomerCode(_appPref.user?.customerCode);
+    _refreshCustomerCode();
+  }
+
+  /// Only accepts a 4–5 digit code — never a UUID.
+  String _formatCustomerCode(String? raw) {
+    var code = (raw ?? '').trim();
+    if (code.toLowerCase().startsWith('customer-')) {
+      code = code.substring('customer-'.length).trim();
+    }
+    if (!RegExp(r'^\d{4,5}$').hasMatch(code)) return '—';
+    return 'Customer-$code';
+  }
+
+  Future<void> _refreshCustomerCode() async {
+    final ownerId = _appPref.ownerUserId;
+    if (ownerId == null || ownerId.isEmpty) return;
+    try {
+      if (!Get.isRegistered<ApiClient>()) return;
+      final res = await Get.find<ApiClient>().getUserDetails(ownerId);
+      final formatted = _formatCustomerCode(res.data.customerCode);
+      if (formatted == '—') return;
+
+      final user = _appPref.user;
+      if (user != null) {
+        final map = Map<String, dynamic>.from(user.toJson());
+        map['customerCode'] = res.data.customerCode;
+        _appPref.user = User.fromJson(map);
+      }
+      if (mounted) setState(() => _displayUserId = formatted);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +64,6 @@ class HelpSetupScreen extends StatelessWidget {
     final user = _appPref.user;
     final outlet = _appPref.selectedOutlet;
 
-    final userIdRaw = (user?.userId ?? user?.id ?? '').trim();
-    final displayUserId = userIdRaw.isEmpty
-        ? '—'
-        : userIdRaw.toLowerCase().startsWith('customer')
-            ? userIdRaw
-            : 'Customer-$userIdRaw';
     final displayName = (user?.firstName?.trim().isNotEmpty == true
             ? user!.firstName!
             : (user?.brandName ?? user?.userName ?? '—'))
@@ -70,7 +110,7 @@ class HelpSetupScreen extends StatelessWidget {
                         _accountRow(
                           icon: Icons.smartphone_outlined,
                           label: loc.help_user_id,
-                          value: displayUserId,
+                          value: _displayUserId,
                           primary: primary,
                         ),
                         const Gap(14),
@@ -182,9 +222,14 @@ class HelpSetupScreen extends StatelessWidget {
                                 background: const Color(0xFF1A2B4A),
                                 foreground: AppColor.white,
                                 onTap: () => _launchUri(
-                                  Uri.parse(
-                                    'mailto:$_supportEmail?subject=${Uri.encodeComponent(loc.support_request)}',
+                                  Uri(
+                                    scheme: 'mailto',
+                                    path: _supportEmail,
+                                    queryParameters: {
+                                      'subject': loc.support_request,
+                                    },
                                   ),
+                                  external: true,
                                 ),
                               ),
                             ),
@@ -396,18 +441,35 @@ class HelpSetupScreen extends StatelessWidget {
   }
 
   Future<void> _launchUri(Uri uri, {bool external = false}) async {
+    final useExternal = external ||
+        uri.scheme == 'mailto' ||
+        uri.scheme == 'tel' ||
+        uri.scheme == 'https' ||
+        uri.scheme == 'http';
+
     try {
       final ok = await launchUrl(
         uri,
-        mode: external
+        mode: useExternal
             ? LaunchMode.externalApplication
             : LaunchMode.platformDefault,
       );
-      if (!ok) {
-        showError(description: 'Could not open link');
-      }
-    } catch (_) {
-      showError(description: 'Could not open link');
+      if (ok) return;
+    } catch (_) {}
+
+    // Windows: open registered protocol handler (mailto/tel/https).
+    if (Platform.isWindows) {
+      try {
+        final result = await Process.run('cmd', [
+          '/c',
+          'start',
+          '',
+          uri.toString(),
+        ]);
+        if (result.exitCode == 0) return;
+      } catch (_) {}
     }
+
+    showError(description: 'Could not open link');
   }
 }

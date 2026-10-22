@@ -38,6 +38,7 @@ import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
+import 'package:billkaro/utils/bill_tax_rows.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
@@ -84,6 +85,11 @@ class AddOrderController extends BaseController {
 
   // State
   final RxMap<String, int> itemQuantities = <String, int>{}.obs;
+
+  /// GetBuilder ids so only the tapped menu tile rebuilds (not the whole grid).
+  static String posItemUiId(String itemId) => 'pos_item_$itemId';
+
+  Timer? _totalsDebounce;
 
   /// Quantities already deducted for the open edit order (server-side stock).
   final Map<String, int> committedStockQuantities = <String, int>{};
@@ -880,6 +886,7 @@ class AddOrderController extends BaseController {
     final resolved = _resolveLine(lineKey);
     final variant = resolved.variant;
     final current = itemQuantities[lineKey] ?? 0;
+    final currentParent = getParentItemQuantity(parsed.itemId);
     final trackStock = variant?.trackStock == true
         ? true
         : (variant == null && item.trackStock);
@@ -906,7 +913,8 @@ class AddOrderController extends BaseController {
     if (itemQuantities[lineKey]! > 100) {
       itemQuantities[lineKey] = 100;
     }
-    calculateTotals();
+    _notifyQtyChange(parsed.itemId, currentParent);
+    scheduleCalculateTotals();
   }
 
   void decrementItemQuantity(String lineKey) {
@@ -921,6 +929,8 @@ class AddOrderController extends BaseController {
       if (parentLine == null) return;
       key = parentLine;
     }
+    final itemId = PosCartLine.fromKey(key).itemId;
+    final currentParent = getParentItemQuantity(itemId);
     final current = itemQuantities[key] ?? 0;
     if (current <= 1) {
       itemQuantities.remove(key);
@@ -928,25 +938,36 @@ class AddOrderController extends BaseController {
     } else {
       itemQuantities[key] = current - 1;
     }
-    calculateTotals();
+    _notifyQtyChange(itemId, currentParent);
+    scheduleCalculateTotals();
   }
 
   void removeItemCompletely(String lineKey) {
     final promoId = PromoCartLine.promotionId(lineKey);
     if (promoId != null) _skippedPromoIds.add(promoId);
+    final touchedIds = <String>{};
     if (itemQuantities.containsKey(lineKey)) {
+      touchedIds.add(
+        PromoCartLine.isPromo(lineKey)
+            ? PromoCartLine.itemId(lineKey)
+            : PosCartLine.fromKey(lineKey).itemId,
+      );
       itemQuantities.remove(lineKey);
       itemRemarks.remove(lineKey);
     } else {
       final keys = itemQuantities.keys
           .where((key) => PosCartLine.fromKey(key).itemId == lineKey)
           .toList();
+      touchedIds.add(lineKey);
       for (final key in keys) {
         itemQuantities.remove(key);
         itemRemarks.remove(key);
       }
     }
-    calculateTotals();
+    for (final id in touchedIds) {
+      notifyPosItemUi(id, structureChanged: true);
+    }
+    scheduleCalculateTotals();
   }
 
   String? _itemRemarkFor(String lineKey) {
@@ -997,6 +1018,15 @@ class AddOrderController extends BaseController {
     final resolved = _resolveLine(lineKey);
     return resolved.variant?.salePrice ?? resolved.item.salePrice;
   }
+
+  /// "Tax" or CGST/SGST rows for the cart, matching the printed bill.
+  List<({String label, double amount})> get taxRows => billTaxRows(
+    lines: cartLines.map(
+      (l) => (amount: l.lineTotal, rate: l.hasGst ? l.gst : 0.0),
+    ),
+    totalTax: totalTax.value,
+    split: Get.find<AppPref>().splitGstOnBill,
+  );
 
   List<CartLineDisplay> get cartLines {
     final lines = <CartLineDisplay>[];
@@ -1490,7 +1520,8 @@ class AddOrderController extends BaseController {
     await saveAndBill(
       status,
       stayOnScreen: action == PosOrderAction.kot && isKotFeatureActive,
-      skipKotPrint: action == PosOrderAction.hold,
+      // Only the dedicated KOT action prints KOT; Bill/Hold print order bill only.
+      skipKotPrint: action != PosOrderAction.kot,
       requireKotPrint: action == PosOrderAction.kot && isKotFeatureActive,
       chargePlatformFee: chargePlatformFee,
     );
@@ -1499,7 +1530,7 @@ class AddOrderController extends BaseController {
   void confirmBillAction() {
     final context = Get.context!;
     final loc = AppLocalizations.of(context)!;
-    final actionLabel = isKotFeatureActive ? 'KOT & Bill' : loc.save_and_bill;
+    final actionLabel = loc.save_and_bill;
 
     showDialog(
       context: context,
@@ -2281,7 +2312,9 @@ class AddOrderController extends BaseController {
           // Note: We preserve itemQuantities across category changes
           // so items added in one category remain selected when switching categories
 
-          await calculateTotals();
+          if (itemQuantities.isNotEmpty) {
+            await calculateTotals();
+          }
 
           final outletId = appPref.selectedOutlet?.id;
           if (outletId != null && newItems.isNotEmpty) {
@@ -2350,7 +2383,9 @@ class AddOrderController extends BaseController {
     }
 
     hasMoreItems.value = pageResult.hasMore;
-    await calculateTotals();
+    if (itemQuantities.isNotEmpty) {
+      await calculateTotals();
+    }
   }
 
   Future<void> getCategories() async {
@@ -2932,6 +2967,7 @@ class AddOrderController extends BaseController {
         'orderFrom': selectedOrderSource.value,
         'isEdit': isEdit.value,
         'isOffline': false,
+        'fromCreateOrder': true,
       },
     );
   }
@@ -3265,6 +3301,7 @@ class AddOrderController extends BaseController {
                     invoiceRequest.orderFrom ?? selectedOrderSource.value,
                 'isEdit': isEdit.value,
                 'isOffline': false,
+                'fromCreateOrder': true,
               },
             );
           },
@@ -3461,6 +3498,7 @@ class AddOrderController extends BaseController {
                   invoiceRequest.orderFrom ?? selectedOrderSource.value,
               'isEdit': isEdit.value,
               'isOffline': false,
+              'fromCreateOrder': true,
             },
           );
         },
@@ -3606,6 +3644,7 @@ class AddOrderController extends BaseController {
                   savedRequest.orderFrom ?? selectedOrderSource.value,
               'isEdit': isEdit.value,
               'isOffline': true,
+              'fromCreateOrder': true,
             },
           );
         },
@@ -4093,7 +4132,10 @@ class AddOrderController extends BaseController {
     if (!StaffAccess.ensure(StaffAccess.canManageSettings)) return;
 
     // await Get.toNamed(AppRoute.orderPreferences);
-    await Modular.to.pushNamed(HomeMainRoutes.orderSettings);
+    await Modular.to.pushNamed(
+      HomeMainRoutes.orderSettings,
+      arguments: {'fromCreateOrder': true},
+    );
 
     // Sync from preferences when returning
     isListView.value = appPref.isListView;
@@ -4105,12 +4147,36 @@ class AddOrderController extends BaseController {
     showAddDetailsOnCreateOrder.refresh();
   }
 
+  void notifyPosItemUi(String itemId, {bool structureChanged = false}) {
+    if (itemId.isEmpty) return;
+    update([
+      posItemUiId(itemId),
+      if (structureChanged) 'pos_list_structure',
+    ]);
+  }
+
+  void _notifyQtyChange(String itemId, int beforeParentQty) {
+    final after = getParentItemQuantity(itemId);
+    notifyPosItemUi(
+      itemId,
+      structureChanged: (beforeParentQty <= 0) != (after <= 0),
+    );
+  }
+
+  void scheduleCalculateTotals() {
+    _totalsDebounce?.cancel();
+    _totalsDebounce = Timer(const Duration(milliseconds: 40), () {
+      unawaited(calculateTotals());
+    });
+  }
+
   @override
   void onClose() {
     itemNameController.dispose();
     salePriceController.dispose();
     remarkController.dispose();
     _searchDebounce?.cancel();
+    _totalsDebounce?.cancel();
     super.onClose();
   }
 }

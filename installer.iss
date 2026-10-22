@@ -8,7 +8,7 @@ AppId={{B9F8A7C6-1234-5678-9ABC-DEF012345678}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 
-DefaultDirName={pf}\{#MyAppName}
+DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 
 OutputDir=installer_output
@@ -21,8 +21,8 @@ WizardStyle=modern
 
 PrivilegesRequired=admin
 
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 UninstallDisplayIcon={app}\{#MyAppExeName}
 

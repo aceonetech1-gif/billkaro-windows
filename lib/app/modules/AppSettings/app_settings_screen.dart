@@ -413,6 +413,55 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           onChanged: controller.setShowQrOnBill,
         ),
         _buildSwitchTile(
+          icon: Icons.image_outlined,
+          title: loc.show_logo_on_bill,
+          subtitle: loc.show_logo_on_bill_subtitle,
+          value: controller.showLogoOnBill,
+          onChanged: controller.setShowLogoOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.storefront_outlined,
+          title: loc.show_outlet_name_on_bill,
+          subtitle: loc.show_outlet_name_on_bill_subtitle,
+          value: controller.showOutletNameOnBill,
+          onChanged: controller.setShowOutletNameOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.vertical_align_top_outlined,
+          title: loc.show_bill_header,
+          subtitle: loc.show_bill_header_subtitle,
+          value: controller.showBillHeader,
+          onChanged: controller.setShowBillHeader,
+        ),
+        _buildSwitchTile(
+          icon: Icons.vertical_align_bottom_outlined,
+          title: loc.show_bill_footer,
+          subtitle: loc.show_bill_footer_subtitle,
+          value: controller.showBillFooter,
+          onChanged: controller.setShowBillFooter,
+        ),
+        _buildSwitchTile(
+          icon: Icons.percent_outlined,
+          title: loc.show_gst_split_on_bill,
+          subtitle: loc.show_gst_split_on_bill_subtitle,
+          value: controller.showGstSplitOnBill,
+          onChanged: controller.setShowGstSplitOnBill,
+        ),
+        _buildActionOrNavTile(
+          icon: Icons.short_text_outlined,
+          title: loc.bill_header_footer,
+          subtitle: loc.bill_header_footer_subtitle,
+          onTap: () => _showBillHeaderFooterDialog(context, loc),
+          showChevron: true,
+        ),
+        _buildSwitchTile(
+          icon: Icons.inventory_2_outlined,
+          title: loc.enable_inventory,
+          subtitle: loc.enable_inventory_subtitle,
+          value: controller.inventoryEnabled,
+          onChanged: controller.setInventoryEnabled,
+        ),
+        _buildSwitchTile(
           icon: Icons.edit_note_outlined,
           title: loc.add_details_on_create_order,
           subtitle: loc.add_details_on_create_order_subtitle,
@@ -944,6 +993,87 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   }
 
   static const double _dialogRadius = 8;
+
+  Future<void> _showBillHeaderFooterDialog(
+    BuildContext context,
+    AppLocalizations loc,
+  ) async {
+    final headerCtrl = TextEditingController(
+      text: controller.billHeaderMessage.value,
+    );
+    final footerCtrl = TextEditingController(
+      text: controller.billFooterMessage.value,
+    );
+
+    Widget field(TextEditingController ctrl, String label, String hint) {
+      return TextField(
+        controller: ctrl,
+        minLines: 2,
+        maxLines: 4,
+        maxLength: 200,
+        keyboardType: TextInputType.multiline,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          alignLabelWithHint: true,
+          border: const OutlineInputBorder(),
+        ),
+      );
+    }
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_dialogRadius),
+          ),
+          title: Text(loc.bill_header_footer),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  field(
+                    headerCtrl,
+                    loc.bill_header_message,
+                    loc.bill_header_message_hint,
+                  ),
+                  const SizedBox(height: 12),
+                  field(
+                    footerCtrl,
+                    loc.bill_footer_message,
+                    loc.bill_footer_message_hint,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(loc.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(loc.save),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (saved == true &&
+        await controller.saveBillHeaderFooter(
+          header: headerCtrl.text,
+          footer: footerCtrl.text,
+        )) {
+      showSuccess(description: loc.bill_header_footer_saved);
+    }
+    headerCtrl.dispose();
+    footerCtrl.dispose();
+  }
 
   Future<void> _showThemeColorPicker(
     BuildContext context,

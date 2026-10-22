@@ -50,7 +50,8 @@ class AuthSessionService {
     if (_handlingUnauthorized) return;
     _handlingUnauthorized = true;
     try {
-      final hasToken = Get.isRegistered<AppPref>() &&
+      final hasToken =
+          Get.isRegistered<AppPref>() &&
           (Get.find<AppPref>().token.trim().isNotEmpty);
 
       // No active session (e.g. failed staff login) — show credentials error only.
@@ -93,6 +94,7 @@ class AuthSessionService {
 
       final appPref = Get.find<AppPref>();
       appPref.token = '';
+      appPref.refreshToken = '';
 
       final db = AppDatabase();
       await db.clearAllData();
@@ -120,12 +122,11 @@ class AuthSessionService {
     if (_showingForcedLogout) return;
     _showingForcedLogout = true;
 
-    final resolvedEmail =
-        email?.trim().isNotEmpty == true
-            ? email!.trim()
-            : (Get.isRegistered<AppPref>()
-                ? Get.find<AppPref>().user?.email?.trim()
-                : null);
+    final resolvedEmail = email?.trim().isNotEmpty == true
+        ? email!.trim()
+        : (Get.isRegistered<AppPref>()
+              ? Get.find<AppPref>().user?.email?.trim()
+              : null);
 
     try {
       disconnectLiveServices();

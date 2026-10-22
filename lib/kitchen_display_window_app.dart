@@ -4,6 +4,7 @@ import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
 import 'package:billkaro/app/modules/KitchenDisplay/kitchen_display_screen.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/utils/kitchen_display_window_launcher.dart';
+import 'package:billkaro/config/app_scroll_behavior.dart';
 import 'package:billkaro/config/app_theme.dart';
 import 'package:billkaro/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,7 @@ class KitchenDisplayWindowApp extends StatelessWidget {
           theme: AppTheme.lightThemeWithPrimary(primary),
           darkTheme: AppTheme.darkThemeWithPrimary(primary),
           themeMode: themeController.themeMode.value,
+          scrollBehavior: const AppScrollBehavior(),
           locale: const Locale('en'),
           fallbackLocale: const Locale('en'),
           localizationsDelegates: const [
@@ -47,6 +49,7 @@ class KitchenDisplayWindowApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Kitchen Display',
       theme: AppTheme.appTheme,
+      scrollBehavior: const AppScrollBehavior(),
       locale: const Locale('en'),
       fallbackLocale: const Locale('en'),
       localizationsDelegates: const [
@@ -69,7 +72,8 @@ class _KitchenDisplayWindowShell extends StatefulWidget {
       _KitchenDisplayWindowShellState();
 }
 
-class _KitchenDisplayWindowShellState extends State<_KitchenDisplayWindowShell> {
+class _KitchenDisplayWindowShellState
+    extends State<_KitchenDisplayWindowShell> {
   @override
   void dispose() {
     if (!kIsWeb && Platform.isWindows) {

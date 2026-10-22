@@ -76,6 +76,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
         final hc = Get.find<HomeScreenController>();
         hc.isKOT.value;
         hc.selectedOutlet.value;
+        hc.inventoryEnabled.value;
         return _buildShell(
           loc,
           kotEnabled:

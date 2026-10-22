@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/modules/Expenses/add_expense_dialog.dart';
 import 'package:billkaro/app/modules/Expenses/expenses_controller.dart';
 import 'package:billkaro/app/services/Modals/expenses/expense_model.dart';
@@ -33,7 +34,7 @@ class _ExpenseReportScreenState extends State<ExpenseReportScreen> {
 
   Future<void> _pickRange() async {
     final now = DateTime.now();
-    final range = await showDateRangePicker(
+    final range = await showAppDateRangePicker(
       context: context,
       firstDate: DateTime(2020),
       lastDate: now.add(const Duration(days: 1)),

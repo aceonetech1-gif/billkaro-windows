@@ -21,6 +21,14 @@ class AppSettingsController extends BaseController {
   late final RxBool isListView;
   late final RxBool notificationsEnabled;
   late final RxBool showQrOnBill;
+  late final RxBool showLogoOnBill;
+  late final RxBool showOutletNameOnBill;
+  late final RxBool showBillHeader;
+  late final RxBool showBillFooter;
+  late final RxBool showGstSplitOnBill;
+  late final RxString billHeaderMessage;
+  late final RxString billFooterMessage;
+  late final RxBool inventoryEnabled;
   late final RxBool _showAddDetailsOnCreateOrder;
   RxBool get showAddDetailsOnCreateOrder => _showAddDetailsOnCreateOrder;
   late final RxBool kotModeEnabled;
@@ -54,6 +62,14 @@ class AppSettingsController extends BaseController {
     isListView = appPref.isListView.obs;
     notificationsEnabled = appPref.notificationsEnabled.obs;
     showQrOnBill = appPref.showQrOnBill.obs;
+    showLogoOnBill = appPref.showLogoOnBill.obs;
+    showOutletNameOnBill = appPref.showOutletNameOnBill.obs;
+    showBillHeader = appPref.showBillHeader.obs;
+    showBillFooter = appPref.showBillFooter.obs;
+    showGstSplitOnBill = appPref.showGstSplitOnBill.obs;
+    billHeaderMessage = appPref.billHeaderMessage.obs;
+    billFooterMessage = appPref.billFooterMessage.obs;
+    inventoryEnabled = appPref.inventoryEnabled.obs;
     _showAddDetailsOnCreateOrder = appPref.showAddDetailsOnCreateOrder.obs;
     kotModeEnabled = appPref.isKOT.obs;
     autoSyncEnabled = appPref.autoSyncEnabled.obs;
@@ -139,6 +155,64 @@ class AppSettingsController extends BaseController {
   void setShowQrOnBill(bool value) {
     appPref.showQrOnBill = value;
     showQrOnBill.value = value;
+  }
+
+  void setShowLogoOnBill(bool value) {
+    appPref.showLogoOnBill = value;
+    showLogoOnBill.value = value;
+  }
+
+  void setShowOutletNameOnBill(bool value) {
+    appPref.showOutletNameOnBill = value;
+    showOutletNameOnBill.value = value;
+  }
+
+  void setShowBillHeader(bool value) {
+    appPref.showBillHeader = value;
+    showBillHeader.value = value;
+  }
+
+  void setShowBillFooter(bool value) {
+    appPref.showBillFooter = value;
+    showBillFooter.value = value;
+  }
+
+  void setShowGstSplitOnBill(bool value) {
+    appPref.showGstSplitOnBill = value;
+    showGstSplitOnBill.value = value;
+  }
+
+  /// Saves the messages on the selected outlet (server), then refreshes it.
+  Future<bool> saveBillHeaderFooter({
+    required String header,
+    required String footer,
+  }) async {
+    final ownerId = appPref.ownerUserId;
+    final outletId = appPref.selectedOutlet?.id;
+    if (ownerId == null || outletId == null) return false;
+
+    final res = await callApi(
+      apiClient.updateOutlet(ownerId, outletId, {
+        'billHeaderMessage': header.trim(),
+        'billFooterMessage': footer.trim(),
+      }),
+    );
+    if (res?['status'] != 'success') return false;
+
+    if (Get.isRegistered<HomeScreenController>()) {
+      await Get.find<HomeScreenController>().getUserDetails();
+    }
+    billHeaderMessage.value = header.trim();
+    billFooterMessage.value = footer.trim();
+    return true;
+  }
+
+  void setInventoryEnabled(bool value) {
+    appPref.inventoryEnabled = value;
+    inventoryEnabled.value = value;
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().inventoryEnabled.value = value;
+    }
   }
 
   void setShowAddDetailsOnCreateOrder(bool value) {

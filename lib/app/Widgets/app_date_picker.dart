@@ -1,17 +1,10 @@
-import 'dart:io';
-
+import 'package:billkaro/config/app_scroll_behavior.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:intl/intl.dart';
 
 const _accent = AppColor.secondaryPrimary;
 
-bool _isDesktopPlatform(BuildContext context) {
-  if (kIsWeb) {
-    return MediaQuery.sizeOf(context).width >= 900;
-  }
-  return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-}
-
-ThemeData _buildPickerTheme(ThemeData base, {required bool isRange}) {
+ThemeData _pickerTheme(ThemeData base) {
   return base.copyWith(
     colorScheme: base.colorScheme.copyWith(
       primary: _accent,
@@ -24,23 +17,6 @@ ThemeData _buildPickerTheme(ThemeData base, {required bool isRange}) {
       backgroundColor: Colors.white,
       headerBackgroundColor: _accent.withValues(alpha: 0.1),
       headerForegroundColor: const Color(0xFF111827),
-      headerHeadlineStyle: const TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF111827),
-      ),
-      headerHelpStyle: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: Colors.grey.shade600,
-      ),
-      weekdayStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: Colors.grey.shade600,
-      ),
-      dayStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      yearStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       todayForegroundColor: WidgetStateProperty.all(_accent),
       todayBackgroundColor: WidgetStateProperty.all(
         _accent.withValues(alpha: 0.08),
@@ -56,22 +32,6 @@ ThemeData _buildPickerTheme(ThemeData base, {required bool isRange}) {
         if (states.contains(WidgetState.selected)) return _accent;
         return null;
       }),
-      rangePickerHeaderHelpStyle: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: Colors.grey.shade600,
-      ),
-      rangeSelectionBackgroundColor: _accent.withValues(alpha: 0.14),
-      rangeSelectionOverlayColor: WidgetStateProperty.all(
-        _accent.withValues(alpha: 0.12),
-      ),
-      dividerColor: Colors.grey.shade200,
-    ),
-    dialogTheme: DialogThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
-      elevation: 16,
-      shadowColor: Colors.black.withValues(alpha: 0.18),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
@@ -82,43 +42,21 @@ ThemeData _buildPickerTheme(ThemeData base, {required bool isRange}) {
   );
 }
 
-Widget _wrapPickerDialog(
-  BuildContext context,
-  Widget? child, {
-  required bool isRange,
-}) {
-  if (child == null) return const SizedBox.shrink();
-
-  final theme = Theme.of(context);
-  final desktop = _isDesktopPlatform(context);
-
-  return Theme(
-    data: _buildPickerTheme(theme, isRange: isRange),
-    child: desktop
-        ? Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isRange ? 780 : 440,
-                maxHeight: isRange ? 680 : 540,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: child,
-                ),
-              ),
-            ),
-          )
-        : child,
-  );
+Widget _themed(BuildContext context, Widget child) {
+  return Theme(data: _pickerTheme(Theme.of(context)), child: child);
 }
 
-AppLocalizations? _loc(BuildContext context) {
-  return AppLocalizations.of(context);
+AppLocalizations? _loc(BuildContext context) => AppLocalizations.of(context);
+
+DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+DateTime _clampDate(DateTime date, DateTime first, DateTime last) {
+  final d = _dateOnly(date);
+  if (d.isBefore(first)) return first;
+  if (d.isAfter(last)) return last;
+  return d;
 }
 
-/// Shows a styled single-date picker used across the app.
 Future<DateTime?> showAppDatePicker({
   required BuildContext context,
   required DateTime initialDate,
@@ -140,12 +78,12 @@ Future<DateTime?> showAppDatePicker({
     cancelText: cancelText ?? loc?.cancel ?? 'Cancel',
     confirmText: confirmText ?? loc?.ok ?? 'OK',
     initialEntryMode: DatePickerEntryMode.calendarOnly,
-    builder: (dialogContext, child) =>
-        _wrapPickerDialog(dialogContext, child, isRange: false),
+    builder: (ctx, child) =>
+        child == null ? const SizedBox.shrink() : _themed(ctx, child),
   );
 }
 
-/// Shows a styled date-range picker used across the app.
+/// Compact dialog date-range picker with month arrows and year picker.
 Future<DateTimeRange?> showAppDateRangePicker({
   required BuildContext context,
   required DateTime firstDate,
@@ -157,22 +95,28 @@ Future<DateTimeRange?> showAppDateRangePicker({
   bool useRootNavigator = true,
 }) {
   final loc = _loc(context);
-  return showDateRangePicker(
+  final first = _dateOnly(firstDate);
+  final last = _dateOnly(lastDate);
+
+  return showDialog<DateTimeRange>(
     context: context,
     useRootNavigator: useRootNavigator,
-    firstDate: firstDate,
-    lastDate: lastDate,
-    initialDateRange: initialDateRange,
-    helpText: helpText ?? loc?.select_date_range ?? 'Select Date Range',
-    cancelText: cancelText ?? loc?.cancel ?? 'Cancel',
-    confirmText: confirmText ?? loc?.ok ?? 'OK',
-    initialEntryMode: DatePickerEntryMode.calendarOnly,
-    builder: (dialogContext, child) =>
-        _wrapPickerDialog(dialogContext, child, isRange: true),
+    builder: (dialogContext) {
+      return _themed(
+        dialogContext,
+        _AppDateRangeDialog(
+          firstDate: first,
+          lastDate: last,
+          initialDateRange: initialDateRange,
+          helpText: helpText ?? loc?.select_date_range ?? 'Select Date Range',
+          cancelText: cancelText ?? loc?.cancel ?? 'Cancel',
+          confirmText: confirmText ?? loc?.ok ?? 'OK',
+        ),
+      );
+    },
   );
 }
 
-/// Convenience wrapper when only [Get.context] is available.
 Future<DateTime?> showAppDatePickerFromGet({
   BuildContext? context,
   required DateTime initialDate,
@@ -197,7 +141,6 @@ Future<DateTime?> showAppDatePickerFromGet({
   );
 }
 
-/// Convenience wrapper when only [Get.context] is available.
 Future<DateTimeRange?> showAppDateRangePickerFromGet({
   BuildContext? context,
   required DateTime firstDate,
@@ -220,4 +163,235 @@ Future<DateTimeRange?> showAppDateRangePickerFromGet({
     confirmText: confirmText,
     useRootNavigator: useRootNavigator,
   );
+}
+
+class _AppDateRangeDialog extends StatefulWidget {
+  const _AppDateRangeDialog({
+    required this.firstDate,
+    required this.lastDate,
+    required this.helpText,
+    required this.cancelText,
+    required this.confirmText,
+    this.initialDateRange,
+  });
+
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final DateTimeRange? initialDateRange;
+  final String helpText;
+  final String cancelText;
+  final String confirmText;
+
+  @override
+  State<_AppDateRangeDialog> createState() => _AppDateRangeDialogState();
+}
+
+class _AppDateRangeDialogState extends State<_AppDateRangeDialog> {
+  static final _fmt = DateFormat('dd MMM yyyy');
+
+  late DateTime? _start;
+  late DateTime? _end;
+  late DateTime _focusedDay;
+  bool _pickingStart = true;
+  int _calendarKey = 0;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialDateRange;
+    _start = initial != null ? _dateOnly(initial.start) : null;
+    _end = initial != null ? _dateOnly(initial.end) : null;
+    _focusedDay = _clampDate(
+      _start ?? widget.lastDate,
+      widget.firstDate,
+      widget.lastDate,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onDaySelected(DateTime day) {
+    final selected = _dateOnly(day);
+    setState(() {
+      if (_pickingStart) {
+        _start = selected;
+        if (_end != null && _end!.isBefore(_start!)) _end = null;
+        _pickingStart = false;
+      } else {
+        if (_start != null && selected.isBefore(_start!)) {
+          _end = _start;
+          _start = selected;
+        } else {
+          _end = selected;
+        }
+        _pickingStart = true;
+      }
+      _focusedDay = selected;
+      _calendarKey++;
+    });
+  }
+
+  void _selectSide({required bool start}) {
+    setState(() {
+      _pickingStart = start;
+      final focus = start ? (_start ?? _focusedDay) : (_end ?? _start ?? _focusedDay);
+      _focusedDay = _clampDate(focus, widget.firstDate, widget.lastDate);
+      _calendarKey++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canConfirm = _start != null && _end != null;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ScrollConfiguration(
+        behavior: const AppScrollBehavior(),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            interactive: true,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.helpText,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _RangeSideChip(
+                            label: 'From',
+                            value: _start == null ? '—' : _fmt.format(_start!),
+                            selected: _pickingStart,
+                            onTap: () => _selectSide(start: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _RangeSideChip(
+                            label: 'To',
+                            value: _end == null ? '—' : _fmt.format(_end!),
+                            selected: !_pickingStart,
+                            onTap: () => _selectSide(start: false),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    CalendarDatePicker(
+                      key: ValueKey(_calendarKey),
+                      initialDate: _focusedDay,
+                      firstDate: widget.firstDate,
+                      lastDate: widget.lastDate,
+                      currentDate: DateTime.now(),
+                      onDateChanged: _onDaySelected,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(widget.cancelText),
+                        ),
+                        TextButton(
+                          onPressed: canConfirm
+                              ? () => Navigator.of(context).pop(
+                                    DateTimeRange(start: _start!, end: _end!),
+                                  )
+                              : null,
+                          child: Text(widget.confirmText),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RangeSideChip extends StatelessWidget {
+  const _RangeSideChip({
+    required this.label,
+    required this.value,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? _accent.withValues(alpha: 0.12)
+          : const Color(0xFFF3F4F6),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? _accent : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? _accent : Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? _accent : const Color(0xFF111827),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

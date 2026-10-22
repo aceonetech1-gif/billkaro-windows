@@ -3,6 +3,7 @@ import 'package:billkaro/app/modules/AddOrder/widgets/cart_line_offer_details.da
 import 'package:billkaro/app/utils/cart_line_display.dart';
 import 'package:billkaro/app/utils/combo_display.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/material.dart';
 
 /// Review dialog shown before committing a Save/Bill action.
@@ -44,6 +45,11 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
     await controller.executeConfirmedPosAction(widget.action);
   }
 
+  Future<void> _printKot(AddOrderController controller) async {
+    if (_submitted) return;
+    await controller.executePosAction(PosOrderAction.kot);
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -68,6 +74,9 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
           // child widgets it returns.
           final lines = controller.cartLines;
           final totals = _Totals.of(controller, loc);
+          controller.isKOT.value;
+          final showKot =
+              controller.isKotFeatureActive && StaffAccess.canPrintKot;
 
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -117,7 +126,9 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
                 totals: totals,
                 loc: loc,
                 canConfirm: lines.isNotEmpty,
+                showKot: showKot,
                 onCancel: () => Navigator.of(context).pop(),
+                onKot: () async => _printKot(controller),
                 onConfirm: () async => _confirm(controller),
               ),
             ],
@@ -138,7 +149,7 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
 class _Totals {
   const _Totals({
     required this.subtotal,
-    required this.tax,
+    required this.taxRows,
     required this.serviceCharge,
     required this.discount,
     required this.discountLabel,
@@ -150,7 +161,7 @@ class _Totals {
     controller.orderDetailsVersion.value;
     return _Totals(
       subtotal: controller.subtotal.value,
-      tax: controller.totalTax.value,
+      taxRows: controller.taxRows,
       serviceCharge: controller.serviceChargeAmount(),
       discount: controller.appliedDiscountAmount(),
       discountLabel: controller.discountSummaryLabel(loc.discount),
@@ -159,7 +170,7 @@ class _Totals {
   }
 
   final double subtotal;
-  final double tax;
+  final List<({String label, double amount})> taxRows;
   final double serviceCharge;
   final double discount;
   final String discountLabel;
@@ -728,21 +739,24 @@ class _SummaryFooter extends StatelessWidget {
     required this.totals,
     required this.loc,
     required this.canConfirm,
+    required this.showKot,
     required this.onCancel,
+    required this.onKot,
     required this.onConfirm,
   });
 
   final _Totals totals;
   final AppLocalizations loc;
   final bool canConfirm;
+  final bool showKot;
   final VoidCallback onCancel;
+  final VoidCallback onKot;
   final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final subtotal = totals.subtotal;
-    final tax = totals.tax;
     final discount = totals.discount;
     final serviceCharge = totals.serviceCharge;
     final total = totals.total;
@@ -757,7 +771,8 @@ class _SummaryFooter extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _SummaryRow(label: 'Subtotal', value: subtotal),
-          if (tax != 0) _SummaryRow(label: 'Tax', value: tax),
+          for (final row in totals.taxRows)
+            _SummaryRow(label: row.label, value: row.amount),
           if (serviceCharge != 0)
             _SummaryRow(label: 'Service Charge', value: serviceCharge),
           if (discount != 0)
@@ -778,13 +793,31 @@ class _SummaryFooter extends StatelessWidget {
               OutlinedButton(
                 onPressed: onCancel,
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(120, 44),
+                  minimumSize: const Size(100, 44),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: Text(loc.cancel),
               ),
+              if (showKot) ...[
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: canConfirm ? onKot : null,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(100, 44),
+                    foregroundColor: AppColor.primary,
+                    side: BorderSide(color: AppColor.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    loc.kot_label,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
               const SizedBox(width: 12),
               FilledButton(
                 onPressed: canConfirm ? onConfirm : null,

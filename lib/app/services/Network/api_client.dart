@@ -522,6 +522,20 @@ abstract class ApiClient {
   @PATCH('$kds/orders/{id}/bump')
   Future<dynamic> bumpKdsTicket(@Path('id') String id);
 
+  // -------------------- OUTLET ANALYTICS (Home / Dashboard) --------------------
+
+  @GET('$outlets/{outletId}/$analytics/home')
+  Future<dynamic> getHomeAnalytics(
+    @Path('outletId') String outletId, {
+    @Query('topLimit') int? topLimit,
+  });
+
+  @GET('$outlets/{outletId}/$analytics/dashboard')
+  Future<dynamic> getDashboardAnalytics(
+    @Path('outletId') String outletId, {
+    @Query('period') String? period,
+  });
+
   // -------------------- INVENTORY --------------------
 
   @GET('$outlets/{outletId}/$inventory/dashboard')

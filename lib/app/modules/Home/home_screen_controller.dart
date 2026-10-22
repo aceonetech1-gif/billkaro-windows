@@ -6,6 +6,7 @@ import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/modules/Home/payment_controller.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
+import 'package:billkaro/app/services/Modals/analytics/outlet_analytics_models.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
@@ -55,11 +56,15 @@ class HomeScreenController extends BaseController {
   // Add this observable for selected outlet
   final Rx<OutletData?> selectedOutlet = Rx<OutletData?>(null);
 
-  // Loading state
+  // Loading — true until local + all home APIs finish.
+  final RxBool isHomeLoading = true.obs;
   final RxBool isLoadingOrders = false.obs;
 
   // KOT mode (reactive so UI updates immediately)
   final RxBool isKOT = false.obs;
+
+  /// Inventory management (reactive so sidebar / home tiles update immediately)
+  final RxBool inventoryEnabled = true.obs;
 
   // Connectivity listener
   StreamSubscription<bool>? _connectivitySubscription;
@@ -72,6 +77,7 @@ class HomeScreenController extends BaseController {
 
     // sync KOT mode from preferences
     isKOT.value = appPref.isKOT;
+    inventoryEnabled.value = appPref.inventoryEnabled;
 
     // Initialize selected outlet from appPref
     selectedOutlet.value = appPref.selectedOutlet;
@@ -87,7 +93,10 @@ class HomeScreenController extends BaseController {
 
     // Initial load
     await getOrderList();
-    unawaited(loadLowStockItems());
+    // Analytics covers low-stock when online; keep as offline fallback trigger.
+    if (!ConnectivityHelper.instance.isConnected) {
+      unawaited(loadLowStockItems());
+    }
 
     // Listen to connectivity changes - only call API when coming back online
     _connectivitySubscription = ConnectivityHelper.instance.onConnectivityChange
@@ -96,7 +105,6 @@ class HomeScreenController extends BaseController {
           if (isConnected && !_lastConnectivityState && !_hasLoadedFromApi) {
             debugPrint('🌐 Internet came back - refreshing orders from API');
             getOrderList(forceApiRefresh: true);
-            unawaited(loadLowStockItems());
           }
           _lastConnectivityState = isConnected;
         });
@@ -180,10 +188,15 @@ class HomeScreenController extends BaseController {
 
   Future<void> getOrderList({bool forceApiRefresh = false}) async {
     try {
+      isHomeLoading.value = true;
       isLoadingOrders.value = true;
 
       final outletId = appPref.selectedOutlet?.id;
-      if (outletId == null) return;
+      if (outletId == null) {
+        isHomeLoading.value = false;
+        isLoadingOrders.value = false;
+        return;
+      }
 
       final isOnline = await NetworkUtils.hasInternetConnection();
       final db = AppDatabase();
@@ -196,14 +209,13 @@ class HomeScreenController extends BaseController {
       }
 
       /// ===============================
-      /// 📦 STEP 1 → ALWAYS LOAD SQLITE
+      /// 📦 STEP 1 → ALWAYS LOAD SQLITE (scoped home bundle)
       /// ===============================
-      final localOrders = await db.getAllOrders(outletId: outletId);
-      occupiedTableOrders.value = _buildOccupiedTableOrders(localOrders);
+      final bundle = await db.getOrdersForHomeDashboard(outletId: outletId);
+      occupiedTableOrders.value = _buildOccupiedTableOrders(bundle.active);
+      allOrders.value = bundle.closed;
 
-      allOrders.value = localOrders.where((e) => e.status == 'closed').toList();
-
-      debugPrint('📦 Loaded ${allOrders.length} orders from SQLite');
+      debugPrint('📦 Loaded ${allOrders.length} closed orders from SQLite');
 
       /// ===============================
       /// 🔌 STEP 2 → IF ONLINE, SYNC API (only if not already loaded or forced)
@@ -234,19 +246,18 @@ class HomeScreenController extends BaseController {
           await db.insertOrders(apiOrders, outletId, isSyncedFromApi: true);
 
           /// Reload from SQLite (single source of truth)
-          final updatedOrders = await db.getAllOrders(outletId: outletId);
-          occupiedTableOrders.value = _buildOccupiedTableOrders(updatedOrders);
-
-          allOrders.value = updatedOrders
-              .where((e) => e.status == 'closed')
-              .toList();
+          final updated = await db.getOrdersForHomeDashboard(outletId: outletId);
+          occupiedTableOrders.value = _buildOccupiedTableOrders(updated.active);
+          allOrders.value = updated.closed;
 
           _hasLoadedFromApi = true;
           debugPrint('✅ Orders synced & refreshed (${allOrders.length})');
 
           // Refresh payment statistics
           if (Get.isRegistered<PaymentController>()) {
-            Get.find<PaymentController>().refresh();
+            unawaited(
+              Get.find<PaymentController>().refreshFromOrders(allOrders.toList()),
+            );
           }
         }
       } else if (!isOnline) {
@@ -255,16 +266,32 @@ class HomeScreenController extends BaseController {
       }
 
       /// ===============================
-      /// 📊 COMMON CALCULATIONS
+      /// 📊 ANALYTICS (server) or LOCAL FALLBACK
       /// ===============================
-      await _loadItemImageMap(outletId);
-      _calculateSalesData();
-      await _enrichTopSellingImages(outletId);
-      _calculateChartSalesData();
+      var homeAnalyticsOk = false;
+      var dashboardAnalyticsOk = false;
+      if (isOnline && !appPref.localStoreClientJoined) {
+        final flags = await _syncAnalyticsFromApi(outletId);
+        homeAnalyticsOk = flags.home;
+        dashboardAnalyticsOk = flags.dashboard;
+      }
 
-      // Refresh payment statistics after calculations
-      if (Get.isRegistered<PaymentController>()) {
-        Get.find<PaymentController>().refresh();
+      if (!dashboardAnalyticsOk) {
+        await _loadItemImageMap(outletId);
+        _calculateSalesData();
+        _calculateChartSalesData();
+        if (Get.isRegistered<PaymentController>()) {
+          unawaited(
+            Get.find<PaymentController>().refreshFromOrders(allOrders.toList()),
+          );
+        }
+      }
+
+      if (!homeAnalyticsOk) {
+        if (!dashboardAnalyticsOk) {
+          await _enrichTopSellingImages(outletId);
+        }
+        unawaited(loadLowStockItems());
       }
     } catch (e) {
       debugPrint('❌ Order load error on homescreen: $e');
@@ -272,7 +299,131 @@ class HomeScreenController extends BaseController {
         description: AppLocalizations.of(Get.context!)!.failed_to_load_orders,
       );
     } finally {
+      isHomeLoading.value = false;
       isLoadingOrders.value = false;
+    }
+  }
+
+  /// Fast server aggregates for Home + Dashboard.
+  Future<({bool home, bool dashboard})> _syncAnalyticsFromApi(
+    String outletId,
+  ) async {
+    try {
+      final period = selectedChartPeriod.value.name;
+      final results = await Future.wait<dynamic>([
+        callApi(
+          apiClient.getHomeAnalytics(outletId, topLimit: 5),
+          showLoader: false,
+        ),
+        if (StaffAccess.canViewDashboardInsights)
+          callApi(
+            apiClient.getDashboardAnalytics(outletId, period: period),
+            showLoader: false,
+          )
+        else
+          Future<dynamic>.value(null),
+      ]);
+
+      var homeOk = false;
+      var dashOk = false;
+      final homeRes = results[0];
+      if (homeRes is Map &&
+          homeRes['status'] == 'success' &&
+          homeRes['data'] is Map) {
+        _applyHomeAnalytics(
+          HomeAnalyticsData.fromJson(
+            Map<String, dynamic>.from(homeRes['data'] as Map),
+          ),
+        );
+        homeOk = true;
+      }
+
+      final dashRes = results.length > 1 ? results[1] : null;
+      if (dashRes is Map &&
+          dashRes['status'] == 'success' &&
+          dashRes['data'] is Map) {
+        _applyDashboardAnalytics(
+          DashboardAnalyticsData.fromJson(
+            Map<String, dynamic>.from(dashRes['data'] as Map),
+          ),
+        );
+        dashOk = true;
+      }
+      return (home: homeOk, dashboard: dashOk);
+    } catch (e) {
+      debugPrint('❌ Analytics sync failed: $e');
+      return (home: false, dashboard: false);
+    }
+  }
+
+  void _applyHomeAnalytics(HomeAnalyticsData data) {
+    if (StaffAccess.canViewProducts) {
+      topSellingItems.value = [
+        for (final item in data.topSellingItems)
+          TopSellingItem(
+            itemId: item.itemId,
+            name: item.name,
+            category: item.category,
+            imageUrl: resolvedMediaUrl(item.imageUrl),
+            quantity: item.quantity,
+            amount: item.amount,
+          ),
+      ];
+    } else {
+      topSellingItems.clear();
+    }
+
+    if (StaffAccess.canViewInventory) {
+      lowStockItems.assignAll(data.lowStockItems);
+    } else {
+      lowStockItems.clear();
+    }
+
+    if (occupiedTableOrders.isEmpty && data.occupiedTables.isNotEmpty) {
+      occupiedTableOrders.value = [
+        for (final row in data.occupiedTables)
+          OrderModel(
+            id: row.id,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            billNumber: row.billNumber,
+            userId: '',
+            tableNumber: row.tableNumber,
+            customerName: row.customerName,
+            outletId: data.outletId,
+            subtotal: 0,
+            totalTax: 0,
+            discount: 0,
+            serviceCharge: 0,
+            totalAmount: row.totalAmount,
+            status: row.status,
+            items: <OrderItem>[],
+            orderFrom: row.orderFrom,
+          ),
+      ];
+    }
+  }
+
+  void _applyDashboardAnalytics(DashboardAnalyticsData data) {
+    todaySales.value = data.kpis.todaySales;
+    yesterdaySales.value = data.kpis.yesterdaySales;
+    todayOrders.value = data.kpis.todayOrders;
+    yesterdayOrders.value = data.kpis.yesterdayOrders;
+
+    todayCategorySales.value = [
+      for (final c in data.salesByCategoryToday)
+        CategorySales(
+          category: c.category,
+          amount: c.amount,
+          quantity: c.quantity,
+        ),
+    ];
+
+    chartSalesData.value = List<double>.from(data.chart.values);
+    chartLabels.value = List<String>.from(data.chart.labels);
+
+    if (Get.isRegistered<PaymentController>()) {
+      Get.find<PaymentController>().applyFromAnalytics(data.payments);
     }
   }
 
@@ -616,7 +767,37 @@ class HomeScreenController extends BaseController {
 
   void setChartPeriod(ChartPeriod period) {
     selectedChartPeriod.value = period;
+    final outletId = selectedOutlet.value?.id ?? appPref.selectedOutlet?.id;
+    if (outletId != null &&
+        outletId.isNotEmpty &&
+        StaffAccess.canViewDashboardInsights &&
+        ConnectivityHelper.instance.isConnected) {
+      unawaited(_fetchDashboardPeriod(outletId, period));
+      return;
+    }
     _calculateChartSalesData();
+  }
+
+  Future<void> _fetchDashboardPeriod(
+    String outletId,
+    ChartPeriod period,
+  ) async {
+    try {
+      final res = await callApi(
+        apiClient.getDashboardAnalytics(outletId, period: period.name),
+        showLoader: false,
+      );
+      if (res is Map && res['status'] == 'success' && res['data'] is Map) {
+        _applyDashboardAnalytics(
+          DashboardAnalyticsData.fromJson(
+            Map<String, dynamic>.from(res['data'] as Map),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Dashboard period fetch failed: $e');
+      _calculateChartSalesData();
+    }
   }
 
   void _ingestItemImages(Iterable<ItemData> items) {

@@ -279,7 +279,7 @@ class InvoicePrintJob extends PrintJob {
               pw.SizedBox(height: 10),
               pw.Center(child: pw.Text('Scan to Pay')),
               pw.Center(
-                child: pw.Image(pw.MemoryImage(qrCodeBytes!), width: 120),
+                child: pw.Image(pw.MemoryImage(qrCodeBytes!), width: 80),
               ),
             ],
           ],

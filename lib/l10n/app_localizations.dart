@@ -3941,6 +3941,120 @@ abstract class AppLocalizations {
   /// **'Show UPI scan-to-pay QR on invoice and print'**
   String get show_qr_on_bill_subtitle;
 
+  /// No description provided for @show_logo_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show logo on bill'**
+  String get show_logo_on_bill;
+
+  /// No description provided for @show_logo_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show business logo on invoice and print'**
+  String get show_logo_on_bill_subtitle;
+
+  /// No description provided for @show_outlet_name_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show outlet name on bill'**
+  String get show_outlet_name_on_bill;
+
+  /// No description provided for @show_outlet_name_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the outlet name under the brand name'**
+  String get show_outlet_name_on_bill_subtitle;
+
+  /// No description provided for @show_bill_header.
+  ///
+  /// In en, this message translates to:
+  /// **'Show header on bill'**
+  String get show_bill_header;
+
+  /// No description provided for @show_bill_header_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the bill header message at the top'**
+  String get show_bill_header_subtitle;
+
+  /// No description provided for @show_bill_footer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show footer on bill'**
+  String get show_bill_footer;
+
+  /// No description provided for @show_bill_footer_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the bill footer message after the total'**
+  String get show_bill_footer_subtitle;
+
+  /// No description provided for @show_gst_split_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show CGST & SGST on bill'**
+  String get show_gst_split_on_bill;
+
+  /// No description provided for @show_gst_split_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Split GST into CGST and SGST (only when the outlet has a GSTIN)'**
+  String get show_gst_split_on_bill_subtitle;
+
+  /// No description provided for @bill_header_footer.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill header & footer'**
+  String get bill_header_footer;
+
+  /// No description provided for @bill_header_footer_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom messages printed at the top and bottom of the bill'**
+  String get bill_header_footer_subtitle;
+
+  /// No description provided for @bill_header_message.
+  ///
+  /// In en, this message translates to:
+  /// **'Header message'**
+  String get bill_header_message;
+
+  /// No description provided for @bill_header_message_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Welcome! Pure veg restaurant'**
+  String get bill_header_message_hint;
+
+  /// No description provided for @bill_footer_message.
+  ///
+  /// In en, this message translates to:
+  /// **'Footer message'**
+  String get bill_footer_message;
+
+  /// No description provided for @bill_footer_message_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Visit again! Goods once sold will not be taken back'**
+  String get bill_footer_message_hint;
+
+  /// No description provided for @bill_header_footer_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill header & footer saved'**
+  String get bill_header_footer_saved;
+
+  /// No description provided for @enable_inventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory management'**
+  String get enable_inventory;
+
+  /// No description provided for @enable_inventory_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable stock, suppliers, recipes and purchase orders'**
+  String get enable_inventory_subtitle;
+
   /// No description provided for @add_details_on_create_order.
   ///
   /// In en, this message translates to:

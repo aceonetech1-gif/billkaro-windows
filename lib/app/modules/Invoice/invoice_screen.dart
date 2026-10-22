@@ -31,6 +31,24 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     super.dispose();
   }
 
+  /// Outlet logo at the top of the bill; hidden when missing/unreachable.
+  Widget _buildLogo() {
+    if (!controller.appPref.showLogoOnBill) return const SizedBox.shrink();
+    final url = resolvedMediaUrl(controller.appPref.selectedOutlet?.logo);
+    if (url.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: CachedNetworkImage(
+        imageUrl: url,
+        height: 120,
+        width: 240,
+        fit: BoxFit.contain,
+        placeholder: (_, __) => const SizedBox(height: 120),
+        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,6 +108,18 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            _buildLogo(),
+                            if (controller.headerMessage.value.isNotEmpty) ...[
+                              Text(
+                                controller.headerMessage.value,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const Gap(6),
+                            ],
                             Text('${controller.appPref.user!.brandName},'),
                             Text(controller.businessName.value),
                             Text(
@@ -360,16 +390,14 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             ),
 
                             // Tax (if applicable)
-                            if (controller.totalTax > 0) ...[
+                            for (final row in controller.taxRows) ...[
                               const Gap(5),
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Tax (GST)'),
-                                  Text(
-                                    '₹${controller.totalTax.toStringAsFixed(2)}',
-                                  ),
+                                  Text(row.label),
+                                  Text('₹${row.amount.toStringAsFixed(2)}'),
                                 ],
                               ),
                             ],
@@ -430,15 +458,23 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             const Gap(10),
                             const DottedLine(),
                             const Gap(10),
-                            const Text(
-                              'Terms & Conditions',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Thank you for doing business with us.',
-                              textAlign: TextAlign.center,
-                            ),
+                            // Footer message replaces the default terms.
+                            if (controller.footerMessage.value.isNotEmpty)
+                              Text(
+                                controller.footerMessage.value,
+                                textAlign: TextAlign.center,
+                              )
+                            else ...[
+                              const Text(
+                                'Terms & Conditions',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Thank you for doing business with us.',
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
 
                             // ✅ QR Code for Payment
                             if (controller.appPref.showQrOnBill &&
@@ -462,7 +498,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                 child: QrImageView(
                                   data: controller.generateUpiUrl(),
                                   version: QrVersions.auto,
-                                  size: 180,
+                                  size: 120,
                                   backgroundColor: Colors.white,
                                 ),
                               ),

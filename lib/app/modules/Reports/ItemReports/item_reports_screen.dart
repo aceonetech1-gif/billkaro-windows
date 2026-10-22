@@ -318,9 +318,9 @@ class ItemReportsScreen extends StatelessWidget {
       }
 
       // Group items by name and calculate totals
-      Map<String, Map<String, dynamic>> groupedItems = {};
+      final Map<String, Map<String, dynamic>> groupedItems = {};
 
-      for (var item in controller.filteredItemsList) {
+      for (final item in controller.filteredItemsList) {
         final groupKey = PosCartLine.reportGroupKey(
           itemName: item.itemName,
           variantName: item.variantName,
@@ -340,14 +340,14 @@ class ItemReportsScreen extends StatelessWidget {
         }
       }
 
-      final list = ListView.separated(
-        physics: scrollPhysics,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      return _ItemReportsScrollList(
+        isWindows: isWindows,
+        scrollPhysics: scrollPhysics,
+        onRefresh: () => controller.getItemsList(forceApiRefresh: true),
         itemCount: groupedItems.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          String itemName = groupedItems.keys.elementAt(index);
-          var itemData = groupedItems[itemName]!;
+          final itemName = groupedItems.keys.elementAt(index);
+          final itemData = groupedItems[itemName]!;
           return _ItemCard(
             index: index,
             itemName: itemName,
@@ -358,11 +358,6 @@ class ItemReportsScreen extends StatelessWidget {
             compact: isWindows,
           );
         },
-      );
-
-      return RefreshIndicator(
-        onRefresh: () async => controller.getItemsList(forceApiRefresh: true),
-        child: Scrollbar(thumbVisibility: isWindows, child: list),
       );
     });
   }
@@ -401,6 +396,59 @@ class ItemReportsScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shared [ScrollController] so mouse wheel + scrollbar thumb drag both work.
+class _ItemReportsScrollList extends StatefulWidget {
+  const _ItemReportsScrollList({
+    required this.isWindows,
+    required this.scrollPhysics,
+    required this.onRefresh,
+    required this.itemCount,
+    required this.itemBuilder,
+  });
+
+  final bool isWindows;
+  final ScrollPhysics scrollPhysics;
+  final Future<void> Function() onRefresh;
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+
+  @override
+  State<_ItemReportsScrollList> createState() => _ItemReportsScrollListState();
+}
+
+class _ItemReportsScrollListState extends State<_ItemReportsScrollList> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = ListView.separated(
+      controller: _scrollController,
+      physics: widget.scrollPhysics,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      itemCount: widget.itemCount,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: widget.itemBuilder,
+    );
+
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: widget.isWindows,
+      trackVisibility: widget.isWindows,
+      interactive: true,
+      child: RefreshIndicator(
+        onRefresh: widget.onRefresh,
+        child: list,
       ),
     );
   }

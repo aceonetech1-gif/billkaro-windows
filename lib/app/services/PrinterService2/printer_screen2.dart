@@ -539,13 +539,6 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       style: const TextStyle(fontSize: 11),
                     ),
                   ),
-                  ButtonSegment(
-                    value: ThermalPaperSize.mm104,
-                    label: Text(
-                      loc.paper_size_4inch,
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  ),
                 ],
                 selected: {roleController.selectedPaperSize.value},
                 onSelectionChanged: (set) {
@@ -1108,10 +1101,6 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         ButtonSegment<ThermalPaperSize>(
           value: ThermalPaperSize.mm80,
           label: Text(loc.paper_size_3inch),
-        ),
-        ButtonSegment<ThermalPaperSize>(
-          value: ThermalPaperSize.mm104,
-          label: Text(loc.paper_size_4inch),
         ),
       ];
 

@@ -5,6 +5,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_list_screen.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
+import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/app/modules/AddOrder/widgets/cart_line_offer_details.dart';
 import 'package:billkaro/app/utils/combo_display.dart';
@@ -291,79 +292,236 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                   () => controller.isListView.value
                       ? AddOrderListScreen(controller: controller)
                       : Obx(() {
-                      if (controller.items.isEmpty) {
-                        // Empty State — only show create shortcuts when allowed.
-                        if (!StaffAccess.canCreateProducts) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(
-                                loc.no_items_found,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w600,
+                          if (controller.items.isEmpty) {
+                            // Empty State — only show create shortcuts when allowed.
+                            if (!StaffAccess.canCreateProducts) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    loc.no_items_found,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          );
-                        }
-                        return SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                              );
+                            }
+                            return SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Add Menu using Photos (AI-powered)
-                                  AddMenuAiCard(
-                                    label: loc.add_your_menu_using_photos,
-                                    cardWidth: itemCardWidth,
-                                    onTap: () => controller.addMenuUsingAI(),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  // Add Item
-                                  AddItemCard(
-                                    label: loc.addItems,
-                                    cardWidth: itemCardWidth,
-                                    onTap: () => controller.addItem('none'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      // When items exist - Show by category
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              controller: scrollController,
-                              padding: EdgeInsets.all(
-                                _isDesktopPlatform ? 12 : 8,
-                              ),
-                              child: Obx(() {
-                                // When "ALL" is selected, show all categories with their items
-                                if (controller.selectedCategory.value
-                                        .toLowerCase() ==
-                                    'none') {
-                                  return Column(
+                                  Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      if (controller.showRecommendedSection &&
-                                          controller
-                                              .recommendedItems
-                                              .isNotEmpty)
-                                        Builder(
-                                          builder: (context) {
+                                      // Add Menu using Photos (AI-powered)
+                                      AddMenuAiCard(
+                                        label: loc.add_your_menu_using_photos,
+                                        cardWidth: itemCardWidth,
+                                        onTap: () =>
+                                            controller.addMenuUsingAI(),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Add Item
+                                      AddItemCard(
+                                        label: loc.addItems,
+                                        cardWidth: itemCardWidth,
+                                        onTap: () => controller.addItem('none'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // When items exist - Show by category
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  controller: scrollController,
+                                  padding: EdgeInsets.all(
+                                    _isDesktopPlatform ? 12 : 8,
+                                  ),
+                                  child: Obx(() {
+                                    // When "ALL" is selected, show all categories with their items
+                                    if (controller.selectedCategory.value
+                                            .toLowerCase() ==
+                                        'none') {
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (controller
+                                                  .showRecommendedSection &&
+                                              controller
+                                                  .recommendedItems
+                                                  .isNotEmpty)
+                                            Builder(
+                                              builder: (context) {
+                                                return Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 8.0,
+                                                          ),
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.star_rounded,
+                                                            color: AppColor
+                                                                .primary,
+                                                            size: 20,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 6,
+                                                          ),
+                                                          Text(
+                                                            loc.recommended_items,
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Wrap(
+                                                      spacing: 12,
+                                                      runSpacing: 12,
+                                                      children: controller
+                                                          .recommendedItems
+                                                          .map((item) {
+                                                            return PosMenuItemTile(
+                                                              controller:
+                                                                  controller,
+                                                              item: item,
+                                                              itemCardWidth:
+                                                                  itemCardWidth,
+                                                            );
+                                                          })
+                                                          .toList(),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                          // Show "None" category items FIRST (top)
+                                          Builder(
+                                            builder: (context) {
+                                              final noneItems = controller.items
+                                                  .where(
+                                                    (item) =>
+                                                        item.category
+                                                                .toLowerCase() ==
+                                                            'none' &&
+                                                        !controller
+                                                            .bestSellingItemIds
+                                                            .contains(item.id),
+                                                  )
+                                                  .toList();
+
+                                              if (noneItems.isEmpty) {
+                                                return SizedBox.shrink();
+                                              }
+
+                                              return Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                          vertical: 8.0,
+                                                        ),
+                                                    child: Text(
+                                                      'None',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Wrap(
+                                                    spacing: 12,
+                                                    runSpacing: 12,
+                                                    children: [
+                                                      // None category items
+                                                      ...noneItems.map((item) {
+                                                        return PosMenuItemTile(
+                                                          controller:
+                                                              controller,
+                                                          item: item,
+                                                          itemCardWidth:
+                                                              itemCardWidth,
+                                                        );
+                                                      }),
+
+                                                      // Add Photo Card
+                                                      AddMenuAiCard(
+                                                        label: loc
+                                                            .add_your_menu_using_photos,
+                                                        cardWidth:
+                                                            itemCardWidth,
+                                                        onTap: () => controller
+                                                            .addMenuUsingAI(),
+                                                      ),
+
+                                                      // Add Item Card
+                                                      AddItemCard(
+                                                        label: loc.addItems,
+                                                        cardWidth:
+                                                            itemCardWidth,
+                                                        onTap: () => controller
+                                                            .addItem('none'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                ],
+                                              );
+                                            },
+                                          ),
+
+                                          // Show all categories with items
+                                          ...controller.categories.map((
+                                            category,
+                                          ) {
+                                            final categoryItems = controller
+                                                .items
+                                                .where(
+                                                  (item) =>
+                                                      item.category
+                                                              .toLowerCase() ==
+                                                          category.categoryName
+                                                              .toLowerCase() &&
+                                                      !controller
+                                                          .bestSellingItemIds
+                                                          .contains(item.id),
+                                                )
+                                                .toList();
+
+                                            if (categoryItems.isEmpty) {
+                                              return SizedBox.shrink();
+                                            }
+
                                             return Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
@@ -373,405 +531,153 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                       const EdgeInsets.symmetric(
                                                         vertical: 8.0,
                                                       ),
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(
-                                                        Icons.star_rounded,
-                                                        color: AppColor.primary,
-                                                        size: 20,
-                                                      ),
-                                                      const SizedBox(width: 6),
-                                                      Text(
-                                                        loc.recommended_items,
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                    ],
+                                                  child: Text(
+                                                    category
+                                                            .categoryName
+                                                            .capitalize ??
+                                                        '',
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
                                                   ),
                                                 ),
                                                 Wrap(
                                                   spacing: 12,
                                                   runSpacing: 12,
-                                                  children: controller.recommendedItems.map((
-                                                    item,
-                                                  ) {
-                                                    return Obx(
-                                                      () => OrderItemCard(
-                                                        cardWidth: itemCardWidth,
-                                                        imageUrl: item.itemImage,
-                                                        posColor: item.posColor,
-                                                        itemName:
-                                                            item
-                                                                .itemName
-                                                                .capitalize ??
-                                                            '',
-                                                        price:
-                                                            double.tryParse(
-                                                              item.salePrice
-                                                                  .toString(),
-                                                            ) ??
-                                                            0.0,
-                                                        quantity: controller
-                                                            .getParentItemQuantity(
-                                                              item.id,
-                                                            ),
-                                                        onDelete: () {
-                                                          controller
-                                                              .removeItemCompletely(
-                                                                item.id,
-                                                              );
-                                                        },
-                                                        onIncrement: () {
-                                                          controller
-                                                              .handlePosItemTap(item);
-                                                        },
-                                                        onDecrement: () {
-                                                          controller
-                                                              .decrementItemQuantity(
-                                                                item.id,
-                                                              );
-                                                        },
-                                                      ),
-                                                    );
-                                                  }).toList(),
+                                                  children: [
+                                                    ...categoryItems.map((
+                                                      item,
+                                                    ) {
+                                                      return PosMenuItemTile(
+                                                        controller: controller,
+                                                        item: item,
+                                                        itemCardWidth:
+                                                            itemCardWidth,
+                                                      );
+                                                    }),
+                                                    AddItemCard(
+                                                      label: loc.addItems,
+                                                      cardWidth: itemCardWidth,
+                                                      onTap: () =>
+                                                          controller.addItem(
+                                                            category
+                                                                .categoryName,
+                                                          ),
+                                                    ),
+                                                  ],
                                                 ),
                                                 const SizedBox(height: 16),
                                               ],
                                             );
-                                          },
-                                        ),
-                                      // Show "None" category items FIRST (top)
-                                      Builder(
-                                        builder: (context) {
-                                          final noneItems = controller.items
-                                              .where(
-                                                (item) =>
-                                                    item.category
-                                                            .toLowerCase() ==
-                                                        'none' &&
-                                                    !controller
-                                                        .bestSellingItemIds
-                                                        .contains(item.id),
-                                              )
-                                              .toList();
+                                          }),
 
-                                          if (noneItems.isEmpty) {
+                                          // Loading indicator for pagination
+                                          Obx(() {
+                                            if (controller
+                                                .isLoadingMore
+                                                .value) {
+                                              return Padding(
+                                                padding: const EdgeInsets.all(
+                                                  16.0,
+                                                ),
+                                                child: Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                ),
+                                              );
+                                            }
                                             return SizedBox.shrink();
-                                          }
+                                          }),
+                                        ],
+                                      );
+                                    } else {
+                                      // Show only selected category items
+                                      final selectedItems = controller.items
+                                          .where(
+                                            (item) =>
+                                                item.category.toLowerCase() ==
+                                                controller
+                                                    .selectedCategory
+                                                    .value
+                                                    .toLowerCase(),
+                                          )
+                                          .toList();
 
-                                          return Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              const Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: 8.0,
-                                                ),
-                                                child: Text(
-                                                  'None',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
-                                              Wrap(
-                                                spacing: 12,
-                                                runSpacing: 12,
-                                                children: [
-                                                  // None category items
-                                                  ...noneItems.map((item) {
-                                                    return Obx(
-                                                      () => OrderItemCard(
-                                                        cardWidth: itemCardWidth,
-                                                        imageUrl: item.itemImage,
-                                                        posColor: item.posColor,
-                                                        itemName:
-                                                            item
-                                                                .itemName
-                                                                .capitalize ??
-                                                            '',
-                                                        price:
-                                                            double.tryParse(
-                                                              item.salePrice
-                                                                  .toString(),
-                                                            ) ??
-                                                            0.0,
-                                                        quantity: controller
-                                                            .getParentItemQuantity(
-                                                              item.id,
-                                                            ),
-                                                        onDelete: () {
-                                                          controller
-                                                              .removeItemCompletely(
-                                                                item.id,
-                                                              );
-                                                        },
-                                                        onIncrement: () {
-                                                          controller
-                                                              .handlePosItemTap(item);
-                                                        },
-                                                        onDecrement: () {
-                                                          controller
-                                                              .decrementItemQuantity(
-                                                                item.id,
-                                                              );
-                                                        },
-                                                      ),
-                                                    );
-                                                  }),
-
-                                                  // Add Photo Card
-                                                  AddMenuAiCard(
-                                                    label: loc
-                                                        .add_your_menu_using_photos,
-                                                    cardWidth: itemCardWidth,
-                                                    onTap: () => controller
-                                                        .addMenuUsingAI(),
-                                                  ),
-
-                                                  // Add Item Card
-                                                  AddItemCard(
-                                                    label: loc.addItems,
-                                                    cardWidth: itemCardWidth,
-                                                    onTap: () => controller
-                                                        .addItem('none'),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 16),
-                                            ],
-                                          );
-                                        },
-                                      ),
-
-                                      // Show all categories with items
-                                      ...controller.categories.map((category) {
-                                        final categoryItems = controller.items
+                                      // Also include items with category "None" when showing a specific category
+                                      // This ensures items with "None" category appear in all tabs
+                                      if (controller.selectedCategory.value
+                                              .toLowerCase() !=
+                                          'none') {
+                                        final noneCategoryItems = controller
+                                            .items
                                             .where(
                                               (item) =>
                                                   item.category.toLowerCase() ==
-                                                      category.categoryName
-                                                          .toLowerCase() &&
-                                                  !controller.bestSellingItemIds
-                                                      .contains(item.id),
+                                                  'none',
                                             )
                                             .toList();
-
-                                        if (categoryItems.isEmpty) {
-                                          return SizedBox.shrink();
-                                        }
-
-                                        return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 8.0,
-                                                  ),
-                                              child: Text(
-                                                category
-                                                        .categoryName
-                                                        .capitalize ??
-                                                    '',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                            Wrap(
-                                              spacing: 12,
-                                              runSpacing: 12,
-                                              children: [
-                                                ...categoryItems.map((item) {
-                                                  return Obx(
-                                                    () => OrderItemCard(
-                                                      cardWidth: itemCardWidth,
-                                                      imageUrl: item.itemImage,
-                                                        posColor: item.posColor,
-                                                      itemName:
-                                                          item
-                                                              .itemName
-                                                              .capitalize ??
-                                                          '',
-                                                      price:
-                                                          double.tryParse(
-                                                            item.salePrice
-                                                                .toString(),
-                                                          ) ??
-                                                          0.0,
-                                                      quantity: controller
-                                                          .getParentItemQuantity(
-                                                            item.id,
-                                                          ),
-                                                      onDelete: () {
-                                                        controller
-                                                            .removeItemCompletely(
-                                                              item.id,
-                                                            );
-                                                      },
-                                                      onIncrement: () {
-                                                        controller
-                                                            .handlePosItemTap(
-                                                              item,
-                                                            );
-                                                      },
-                                                      onDecrement: () {
-                                                        controller
-                                                            .decrementItemQuantity(
-                                                              item.id,
-                                                            );
-                                                      },
-                                                    ),
-                                                  );
-                                                }),
-                                                AddItemCard(
-                                                  label: loc.addItems,
-                                                  cardWidth: itemCardWidth,
-                                                  onTap: () =>
-                                                      controller.addItem(
-                                                        category.categoryName,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 16),
-                                          ],
+                                        // Put None items on top
+                                        selectedItems.insertAll(
+                                          0,
+                                          noneCategoryItems,
                                         );
-                                      }),
+                                      }
 
-                                      // Loading indicator for pagination
-                                      Obx(() {
-                                        if (controller.isLoadingMore.value) {
-                                          return Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: Center(
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            ),
-                                          );
-                                        }
-                                        return SizedBox.shrink();
-                                      }),
-                                    ],
-                                  );
-                                } else {
-                                  // Show only selected category items
-                                  final selectedItems = controller.items
-                                      .where(
-                                        (item) =>
-                                            item.category.toLowerCase() ==
-                                            controller.selectedCategory.value
-                                                .toLowerCase(),
-                                      )
-                                      .toList();
-
-                                  // Also include items with category "None" when showing a specific category
-                                  // This ensures items with "None" category appear in all tabs
-                                  if (controller.selectedCategory.value
-                                          .toLowerCase() !=
-                                      'none') {
-                                    final noneCategoryItems = controller.items
-                                        .where(
-                                          (item) =>
-                                              item.category.toLowerCase() ==
-                                              'none',
-                                        )
-                                        .toList();
-                                    // Put None items on top
-                                    selectedItems.insertAll(
-                                      0,
-                                      noneCategoryItems,
-                                    );
-                                  }
-
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8.0,
-                                        ),
-                                        child: Text(
-                                          controller
-                                                  .selectedCategory
-                                                  .value
-                                                  .capitalize ??
-                                              '',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      Wrap(
-                                        spacing: 12,
-                                        runSpacing: 12,
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          ...selectedItems.map((item) {
-                                            return Obx(
-                                              () => OrderItemCard(
-                                                cardWidth: itemCardWidth,
-                                                imageUrl: item.itemImage,
-                                                        posColor: item.posColor,
-                                                itemName:
-                                                    item.itemName.capitalize ??
-                                                    '',
-                                                price:
-                                                    double.tryParse(
-                                                      item.salePrice.toString(),
-                                                    ) ??
-                                                    0.0,
-                                                quantity: controller
-                                                    .getParentItemQuantity(item.id),
-                                                onDelete: () {
-                                                  controller
-                                                      .removeItemCompletely(
-                                                        item.id,
-                                                      );
-                                                },
-                                                onIncrement: () {
-                                                  controller
-                                                      .incrementItemQuantity(
-                                                        item.id,
-                                                      );
-                                                },
-                                                onDecrement: () {
-                                                  controller
-                                                      .decrementItemQuantity(
-                                                        item.id,
-                                                      );
-                                                },
-                                              ),
-                                            );
-                                          }),
-                                          AddItemCard(
-                                            label: loc.addItems,
-                                            cardWidth: itemCardWidth,
-                                            onTap: () => controller.addItem(
-                                              controller.selectedCategory.value,
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 8.0,
                                             ),
+                                            child: Text(
+                                              controller
+                                                      .selectedCategory
+                                                      .value
+                                                      .capitalize ??
+                                                  '',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          Wrap(
+                                            spacing: 12,
+                                            runSpacing: 12,
+                                            children: [
+                                              ...selectedItems.map((item) {
+                                                return PosMenuItemTile(
+                                                  controller: controller,
+                                                  item: item,
+                                                  itemCardWidth: itemCardWidth,
+                                                );
+                                              }),
+                                              AddItemCard(
+                                                label: loc.addItems,
+                                                cardWidth: itemCardWidth,
+                                                onTap: () => controller.addItem(
+                                                  controller
+                                                      .selectedCategory
+                                                      .value,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
-                                      ),
-                                    ],
-                                  );
-                                }
-                              }),
-                            ),
-                          ),
+                                      );
+                                    }
+                                  }),
+                                ),
+                              ),
 
-                          // Summary Section pinned at bottom - Only show when items are selected
-                        ],
-                      );
-                    }),
+                              // Summary Section pinned at bottom - Only show when items are selected
+                            ],
+                          );
+                        }),
                 );
               },
             ),
@@ -785,12 +691,11 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          leading: _canShowBackButton(context)
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                )
-              : null,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: () => _onBackPressed(context),
+          ),
           elevation: 0,
           centerTitle: false,
           toolbarHeight: _isDesktopPlatform ? 64 : kToolbarHeight,
@@ -968,7 +873,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             // }),
             if (StaffAccess.canManageSettings)
               IconButton(
-                icon: const Icon(Icons.settings_outlined, color: AppColor.white),
+                icon: const Icon(
+                  Icons.settings_outlined,
+                  color: AppColor.white,
+                ),
                 onPressed: controller.openSettings,
               ),
           ],
@@ -1291,8 +1199,23 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     );
   }
 
-  bool _canShowBackButton(BuildContext context) {
-    return Modular.to.canPop() || Navigator.of(context).canPop();
+  Future<void> _onBackPressed(BuildContext context) async {
+    final canLeave = await _showLeaveConfirmationDialog(context);
+    if (!canLeave || !mounted) return;
+
+    if (controller.isFromTableScreen.value) {
+      Modular.to.navigate(HomeMainRoutes.tables);
+      return;
+    }
+    if (Modular.to.canPop()) {
+      Modular.to.pop();
+      return;
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+    Modular.to.navigate(HomeMainRoutes.home);
   }
 
   Future<bool> _showLeaveConfirmationDialog(BuildContext context) async {
@@ -1600,186 +1523,197 @@ class _CartPanel extends StatelessWidget {
                               : EdgeInsets.zero,
                           decoration: line.isPromo
                               ? BoxDecoration(
-                                  color: AppColor.success.withValues(alpha: 0.08),
+                                  color: AppColor.success.withValues(
+                                    alpha: 0.08,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: AppColor.success.withValues(alpha: 0.25),
+                                    color: AppColor.success.withValues(
+                                      alpha: 0.25,
+                                    ),
                                   ),
                                 )
                               : null,
                           child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          line.name,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13.5,
-                                          ),
-                                        ),
-                                      ),
-                                      if (line.isPromo)
-                                        Container(
-                                          margin: const EdgeInsets.only(left: 6),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColor.success
-                                                .withValues(alpha: 0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: const Text(
-                                            'FREE',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColor.success,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            line.name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13.5,
                                             ),
+                                          ),
                                         ),
+                                        if (line.isPromo)
+                                          Container(
+                                            margin: const EdgeInsets.only(
+                                              left: 6,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColor.success
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'FREE',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColor.success,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    if (line.comboIncludes != null) ...[
+                                      const SizedBox(height: 2),
+                                      ComboIncludesLabel(
+                                        text: line.comboIncludes!,
                                       ),
                                     ],
-                                  ),
-                                  if (line.comboIncludes != null) ...[
-                                    const SizedBox(height: 2),
-                                    ComboIncludesLabel(text: line.comboIncludes!),
-                                  ],
-                                  if (line.hasOfferInfo) ...[
+                                    if (line.hasOfferInfo) ...[
+                                      const SizedBox(height: 4),
+                                      CartLineOfferDetails(
+                                        offerName: line.offerName,
+                                        offerDetail: line.offerDetail,
+                                      ),
+                                    ],
                                     const SizedBox(height: 4),
-                                    CartLineOfferDetails(
-                                      offerName: line.offerName,
-                                      offerDetail: line.offerDetail,
-                                    ),
-                                  ],
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    line.isPromo
-                                        ? 'Offer item × ${line.quantity}'
-                                        : '₹${line.unitPrice.toStringAsFixed(2)} × ${line.quantity}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  if (line.hasGst)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Text(
-                                        line.gstLabel,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant,
-                                        ),
+                                    Text(
+                                      line.isPromo
+                                          ? 'Offer item × ${line.quantity}'
+                                          : '₹${line.unitPrice.toStringAsFixed(2)} × ${line.quantity}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
-                                  if (line.pendingKot > 0 &&
-                                      controller.isKotFeatureActive)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        '${line.pendingKot} new for kitchen',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFFE65100),
-                                        ),
-                                      ),
-                                    ),
-                                  if (line.remark.isNotEmpty &&
-                                      !line.remark.startsWith('Promo: '))
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        '📝 ${line.remark}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontStyle: FontStyle.italic,
-                                          color: theme.colorScheme.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (!line.isPromo)
-                              IconButton(
-                                tooltip: 'Item remark',
-                                icon: Icon(
-                                  line.remark.isNotEmpty
-                                      ? Icons.chat_bubble
-                                      : Icons.chat_bubble_outline,
-                                  size: 20,
-                                  color: line.remark.isNotEmpty
-                                      ? AppColor.primary
-                                      : Colors.grey,
-                                ),
-                                onPressed: () => controller.showItemRemarkDialog(
-                                  line.lineKey,
-                                  line.name,
-                                ),
-                              ),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerHighest
-                                    .withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove, size: 16),
-                                    splashRadius: 16,
-                                    onPressed: () =>
-                                        controller.decrementItemQuantity(
-                                          line.lineKey,
-                                        ),
-                                  ),
-                                  Text(
-                                    '${line.quantity}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  if (!line.isPromo)
-                                    IconButton(
-                                      icon: const Icon(Icons.add, size: 16),
-                                      splashRadius: 16,
-                                      onPressed: () =>
-                                          controller.incrementItemQuantity(
-                                            line.lineKey,
+                                    if (line.hasGst)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          line.gstLabel,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
                                           ),
+                                        ),
+                                      ),
+                                    if (line.pendingKot > 0 &&
+                                        controller.isKotFeatureActive)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          '${line.pendingKot} new for kitchen',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFFE65100),
+                                          ),
+                                        ),
+                                      ),
+                                    if (line.remark.isNotEmpty &&
+                                        !line.remark.startsWith('Promo: '))
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          '📝 ${line.remark}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (!line.isPromo)
+                                IconButton(
+                                  tooltip: 'Item remark',
+                                  icon: Icon(
+                                    line.remark.isNotEmpty
+                                        ? Icons.chat_bubble
+                                        : Icons.chat_bubble_outline,
+                                    size: 20,
+                                    color: line.remark.isNotEmpty
+                                        ? AppColor.primary
+                                        : Colors.grey,
+                                  ),
+                                  onPressed: () =>
+                                      controller.showItemRemarkDialog(
+                                        line.lineKey,
+                                        line.name,
+                                      ),
+                                ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: theme
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove, size: 16),
+                                      splashRadius: 16,
+                                      onPressed: () => controller
+                                          .decrementItemQuantity(line.lineKey),
                                     ),
-                                ],
+                                    Text(
+                                      '${line.quantity}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    if (!line.isPromo)
+                                      IconButton(
+                                        icon: const Icon(Icons.add, size: 16),
+                                        splashRadius: 16,
+                                        onPressed: () =>
+                                            controller.incrementItemQuantity(
+                                              line.lineKey,
+                                            ),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              line.isPromo
-                                  ? 'FREE'
-                                  : '₹${line.lineTotalWithGst.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: line.isPromo
-                                    ? AppColor.success
-                                    : theme.colorScheme.onSurface,
+                              const SizedBox(width: 8),
+                              Text(
+                                line.isPromo
+                                    ? 'FREE'
+                                    : '₹${line.lineTotalWithGst.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  color: line.isPromo
+                                      ? AppColor.success
+                                      : theme.colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                         );
                       },
                     ),
@@ -1798,11 +1732,8 @@ class _CartPanel extends StatelessWidget {
                     'Subtotal',
                     '₹${controller.subtotal.value.toStringAsFixed(2)}',
                   ),
-                  if (controller.totalTax.value > 0)
-                    _row(
-                      'Tax',
-                      '₹${controller.totalTax.value.toStringAsFixed(2)}',
-                    ),
+                  for (final row in controller.taxRows)
+                    _row(row.label, '₹${row.amount.toStringAsFixed(2)}'),
                   if (controller.serviceChargeAmount() > 0)
                     _row(
                       'Service Charge',
@@ -2598,7 +2529,11 @@ class OrderItemCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => tileColor != null
                             ? ColoredBox(color: tileColor)
-                            : Assets.svg.placeholder.svg(fit: BoxFit.cover),
+                            : Icon(
+                                Icons.image_not_supported,
+                                color: Colors.grey[400],
+                                size: 40,
+                              ),
                       )
                     : tileColor != null
                     ? ColoredBox(
@@ -2616,7 +2551,11 @@ class OrderItemCard extends StatelessWidget {
                           ),
                         ),
                       )
-                    : Assets.svg.placeholder.svg(fit: BoxFit.cover),
+                    : Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey[400],
+                        size: 40,
+                      ),
               ),
             ),
             Padding(
@@ -2709,6 +2648,43 @@ class OrderItemCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Rebuilds only this menu tile on qty changes (avoids full-grid Obx storms).
+class PosMenuItemTile extends StatelessWidget {
+  const PosMenuItemTile({
+    super.key,
+    required this.controller,
+    required this.item,
+    required this.itemCardWidth,
+  });
+
+  final AddOrderController controller;
+  final ItemData item;
+  final double itemCardWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: GetBuilder<AddOrderController>(
+        id: AddOrderController.posItemUiId(item.id),
+        builder: (c) {
+          final itemName = item.itemName;
+          return OrderItemCard(
+            cardWidth: itemCardWidth,
+            imageUrl: item.itemImage,
+            posColor: item.posColor,
+            itemName: itemName.capitalize ?? itemName,
+            price: double.tryParse(item.salePrice.toString()) ?? 0.0,
+            quantity: c.getParentItemQuantity(item.id),
+            onDelete: () => c.removeItemCompletely(item.id),
+            onIncrement: () => c.handlePosItemTap(item),
+            onDecrement: () => c.decrementItemQuantity(item.id),
+          );
+        },
       ),
     );
   }

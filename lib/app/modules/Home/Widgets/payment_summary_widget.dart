@@ -1,7 +1,9 @@
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/payment_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 
 class PaymentSummaryWidget extends StatelessWidget {
   const PaymentSummaryWidget({super.key});
@@ -28,11 +30,36 @@ class PaymentSummaryWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Obx(() {
-            if (paymentController.isLoading.value) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: CircularProgressIndicator(),
+            final homeLoading =
+                Get.isRegistered<HomeScreenController>() &&
+                Get.find<HomeScreenController>().isHomeLoading.value;
+            if (homeLoading || paymentController.isLoading.value) {
+              return Shimmer.fromColors(
+                baseColor: Colors.grey.shade300,
+                highlightColor: Colors.grey.shade100,
+                child: _cardShell(
+                  child: Column(
+                    children: [
+                      Container(height: 56, color: Colors.white),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          for (var i = 0; i < 3; i++) ...[
+                            if (i > 0) const SizedBox(width: 10),
+                            Expanded(
+                              child: Container(
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               );
             }

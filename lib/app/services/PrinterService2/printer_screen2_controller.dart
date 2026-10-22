@@ -93,8 +93,6 @@ class PrinterScreen2Controller extends GetxController {
           return '2 inch';
         case ThermalPaperSize.mm80:
           return '3 inch';
-        case ThermalPaperSize.mm104:
-          return '4 inch';
       }
     }
     final loc = AppLocalizations.of(ctx)!;
@@ -103,8 +101,6 @@ class PrinterScreen2Controller extends GetxController {
         return loc.paper_size_2inch;
       case ThermalPaperSize.mm80:
         return loc.paper_size_3inch;
-      case ThermalPaperSize.mm104:
-        return loc.paper_size_4inch;
     }
   }
 

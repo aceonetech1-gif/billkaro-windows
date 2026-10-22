@@ -140,12 +140,21 @@ class LoginController extends BaseController {
             ? apiClient.sendStaffPhoneOtp({'phone': phone})
             : apiClient.sendPhoneOtp({'phone': phone}),
         showLoader: false,
+        apiErrorHandler: (error) async {
+          if (!isStaff &&
+              AuthSessionService.isAccountNotActivatedError(error)) {
+            final email = registrationKeyController.text.trim();
+            if (email.isNotEmpty && GetUtils.isEmail(email)) {
+              AuthSessionService.showActivationDialogForEmail(email);
+              return true;
+            }
+          }
+          return false;
+        },
       );
 
-      if (response == null) {
-        showError(description: 'Failed to send OTP. Please try again.');
-        return;
-      }
+      // Interceptor / callApi already showed the API error snackbar.
+      if (response == null) return;
 
       phoneOtpSent.value = true;
       otpController.clear();
@@ -184,10 +193,8 @@ class LoginController extends BaseController {
       );
 
       debugPrint('Phone OTP login response: $response');
-      if (response == null) {
-        showError(description: 'Invalid OTP. Please try again.');
-        return;
-      }
+      // Interceptor / callApi already showed the API error snackbar.
+      if (response == null) return;
 
       await _completeLogin(response, isStaff: isStaff);
     } catch (e) {
@@ -342,13 +349,8 @@ class LoginController extends BaseController {
         },
       );
       debugPrint('Login Response: $response');
-      if (response == null) {
-        showError(
-          description:
-              'Login failed. Please check your credentials and try again.',
-        );
-        return;
-      }
+      // Interceptor / callApi already showed the API error snackbar.
+      if (response == null) return;
 
       await _completeLogin(response, isStaff: isStaff);
     } catch (e) {
@@ -375,6 +377,7 @@ class LoginController extends BaseController {
     }
 
     appPref.token = response.accessToken;
+    appPref.refreshToken = response.refreshToken ?? '';
     appPref.isStaffSession = roleIsStaff;
     appPref.user = response.user;
     appPref.staffPermissions = response.user.permissions ?? [];

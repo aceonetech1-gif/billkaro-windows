@@ -1,3 +1,4 @@
+import 'package:billkaro/app/modules/Tables/table_qr_image.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -155,6 +156,12 @@ Future<void> showTableQrSheet({
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    DownloadTableQrButton(
+                      businessName: businessName,
+                      tableDisplayName: tableDisplayName,
+                      menuUrl: menuUrl,
                     ),
                     if (onPrint != null) ...[
                       const SizedBox(height: 12),

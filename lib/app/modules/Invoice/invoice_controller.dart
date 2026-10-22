@@ -4,6 +4,7 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/bill_tax_rows.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/app/services/download/download_notification_service.dart';
 import 'package:billkaro/app/services/download/file_download_service.dart';
@@ -34,6 +35,8 @@ class InvoicePreviewController extends BaseController {
 
   final upiId = ''.obs;
   final businessName = ''.obs;
+  final headerMessage = ''.obs;
+  final footerMessage = ''.obs;
   pw.ImageProvider? qrCodeImageProvider;
 
   double get subtotal => itemList.fold(0.0, (sum, item) {
@@ -53,6 +56,13 @@ class InvoicePreviewController extends BaseController {
   double get totalAmount =>
       subtotal + totalTax + serviceCharge.value - discount.value;
 
+  /// "Tax (GST)" or CGST/SGST rows, matching the printed bill.
+  List<({String label, double amount})> get taxRows => billTaxRows(
+    lines: itemList.map((i) => (amount: i.salePrice * i.quantity, rate: i.gst)),
+    totalTax: totalTax,
+    split: appPref.splitGstOnBill,
+  );
+
   /// Builds the invoice PDF document matching the preview screen layout.
   void _buildPdfDocument() {
     final user = appPref.user!;
@@ -67,6 +77,16 @@ class InvoicePreviewController extends BaseController {
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         build: (pw.Context context) {
           return [
+            // --- Custom Header Message ---
+            if (headerMessage.value.isNotEmpty) ...[
+              pw.Text(
+                headerMessage.value,
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 6),
+            ],
+
             // --- Business Header ---
             pw.Text(
               '${user.brandName},',
@@ -218,9 +238,9 @@ class InvoicePreviewController extends BaseController {
             _buildSummaryRow('Subtotal', 'Rs ${subtotal.toStringAsFixed(2)}'),
 
             // --- Tax ---
-            if (totalTax > 0) ...[
+            for (final row in taxRows) ...[
               pw.SizedBox(height: 5),
-              _buildSummaryRow('Tax (GST)', 'Rs ${totalTax.toStringAsFixed(2)}'),
+              _buildSummaryRow(row.label, 'Rs ${row.amount.toStringAsFixed(2)}'),
             ],
 
             // --- Service Charge ---
@@ -248,14 +268,23 @@ class InvoicePreviewController extends BaseController {
             _buildDottedLine(),
             pw.SizedBox(height: 10),
 
-            // --- Terms ---
-            pw.Center(
-              child: pw.Column(children: [
-                pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-                pw.SizedBox(height: 4),
-                pw.Text('Thank you for doing business with us.', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 11)),
-              ]),
-            ),
+            // --- Footer message, or the default terms when there is none ---
+            if (footerMessage.value.isNotEmpty)
+              pw.Center(
+                child: pw.Text(
+                  footerMessage.value,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 11),
+                ),
+              )
+            else
+              pw.Center(
+                child: pw.Column(children: [
+                  pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                  pw.SizedBox(height: 4),
+                  pw.Text('Thank you for doing business with us.', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 11)),
+                ]),
+              ),
 
             // --- QR Code ---
             if (appPref.showQrOnBill && upiId.value.isNotEmpty && qrCodeImageProvider != null) ...[
@@ -270,7 +299,7 @@ class InvoicePreviewController extends BaseController {
                       border: pw.Border.all(color: PdfColors.grey400),
                       borderRadius: pw.BorderRadius.circular(8),
                     ),
-                    child: pw.Image(qrCodeImageProvider!, width: 150, height: 150),
+                    child: pw.Image(qrCodeImageProvider!, width: 100, height: 100),
                   ),
                   pw.SizedBox(height: 10),
                   pw.Text('UPI ID: ${upiId.value}', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey)),
@@ -345,6 +374,10 @@ class InvoicePreviewController extends BaseController {
     phone.value = appPref.selectedOutlet!.phoneNumber ?? '';
     upiId.value = appPref.selectedOutlet?.upiId ?? '';
     businessName.value = appPref.selectedOutlet?.businessName ?? '';
+    headerMessage.value =
+        appPref.showBillHeader ? appPref.billHeaderMessage : '';
+    footerMessage.value =
+        appPref.showBillFooter ? appPref.billFooterMessage : '';
   }
 
   void getItemList() {

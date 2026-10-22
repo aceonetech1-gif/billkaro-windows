@@ -343,7 +343,11 @@ Future<void> _showRawMaterialDialog(
       },
     ),
     footerActions: [
-      TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
+      OutlinedButton(
+        onPressed: () => Get.back(),
+        child: Text(loc.cancel),
+      ),
+      const SizedBox(width: 12),
       ElevatedButton(
         onPressed: () async {
           final isValid = formKey.currentState?.validate() ?? false;

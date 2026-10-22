@@ -39,13 +39,26 @@ Object? _readAccessModeChosen(Map json, String key) {
   return null;
 }
 
+String? _readCustomerCode(Map json, String key) {
+  final v = json['customerCode'] ?? json['customer_code'];
+  if (v == null) return null;
+  final s = v.toString().trim();
+  return s.isEmpty ? null : s;
+}
+
 @JsonSerializable()
 class LoginResponse {
   @JsonKey(name: 'access_token')
   final String accessToken;
+  @JsonKey(name: 'refresh_token')
+  final String? refreshToken;
   final User user;
 
-  LoginResponse({required this.accessToken, required this.user});
+  LoginResponse({
+    required this.accessToken,
+    this.refreshToken,
+    required this.user,
+  });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) =>
       _$LoginResponseFromJson(json);
@@ -84,6 +97,10 @@ class User {
   /// Business owner user id when [role] is `staff` ([id] is the staff record id).
   final String? userId;
 
+  /// Short support-facing ID (4–5 digits). Never use UUID [id] for display.
+  @JsonKey(readValue: _readCustomerCode)
+  final String? customerCode;
+
   /// Staff-only profile fields (ignored for business owners).
   final String? userName;
   final String? uniqueId;
@@ -117,6 +134,7 @@ class User {
     this.staffRole,
     this.permissions,
     this.userId,
+    this.customerCode,
     this.userName,
     this.uniqueId,
     this.district,
@@ -146,6 +164,8 @@ class OutletData {
   final String? zomatoLink;
   final String? gstinNumber;
   final String? fssaiNumber;
+  final String? billHeaderMessage;
+  final String? billFooterMessage;
   final String? outletAge;
   final String? logo;
   @JsonKey(readValue: _readOutletCreatedAt)
@@ -170,6 +190,8 @@ class OutletData {
     this.zomatoLink,
     this.gstinNumber,
     this.fssaiNumber,
+    this.billHeaderMessage,
+    this.billFooterMessage,
     this.outletAge,
     this.logo,
     this.createdAt,

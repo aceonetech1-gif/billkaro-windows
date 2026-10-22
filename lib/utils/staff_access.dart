@@ -202,7 +202,8 @@ class StaffAccess {
   static bool get canAccessDeletedOrders => isOwnerSession;
 
   /// Stock summary — owner only (hidden from staff).
-  static bool get canAccessStockSummary => isOwnerSession;
+  static bool get canAccessStockSummary =>
+      isOwnerSession && _pref.inventoryEnabled;
 
   /// Backward-compatible aliases used by older UI.
   static bool get canCreateBill => canCreateSales;
@@ -225,9 +226,11 @@ class StaffAccess {
   static bool get canViewDashboardInsights => isOwnerSession || canViewReports;
 
   static bool get canViewInventory =>
+      _pref.inventoryEnabled &&
       hasPermission(StaffPermissionKeys.viewInventory);
 
   static bool get canAdjustStock =>
+      _pref.inventoryEnabled &&
       hasPermission(StaffPermissionKeys.adjustStock);
 
   static bool get canViewCustomers =>

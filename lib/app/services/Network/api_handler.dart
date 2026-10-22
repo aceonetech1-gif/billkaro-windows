@@ -8,6 +8,12 @@ import 'package:dio/dio.dart';
 typedef ApiErrorHandler = Future<bool> Function(DioException error);
 typedef Json = Map<String, dynamic>;
 
+/// Set on [RequestOptions.extra] when the Dio interceptor already showed UI.
+const String kApiErrorUiShownKey = 'errorUiShown';
+
+String? _lastShownErrorKey;
+DateTime? _lastShownErrorAt;
+
 Future<T?> callApi<T>(
   Future<T> request, {
   bool showLoader = true,
@@ -55,11 +61,22 @@ Future<T?> callApi<T>(
   return null;
 }
 
+bool _wasErrorUiAlreadyShown(DioException error) {
+  return error.requestOptions.extra[kApiErrorUiShownKey] == true;
+}
+
+void markApiErrorUiShown(RequestOptions options) {
+  options.extra[kApiErrorUiShownKey] = true;
+}
+
 void onResponseError(DioException error) {
   debugPrint('onResponseError: Status Code: ${error.response?.statusCode}');
   debugPrint(
     'onResponseError: Response Data: ${error.response?.statusMessage}',
   );
+
+  // Interceptor already displayed this HTTP error — avoid a second snackbar.
+  if (_wasErrorUiAlreadyShown(error)) return;
 
   // Handle network errors
   if (error.type == DioExceptionType.unknown &&
@@ -119,6 +136,22 @@ List<String> _processErrorResponse(dynamic errorData) {
   return errors;
 }
 
+bool _shouldSkipDuplicateSnack({
+  required String? title,
+  required String? description,
+}) {
+  final key = '${title ?? ''}|${description ?? ''}';
+  final now = DateTime.now();
+  if (_lastShownErrorKey == key &&
+      _lastShownErrorAt != null &&
+      now.difference(_lastShownErrorAt!) < const Duration(milliseconds: 3200)) {
+    return true;
+  }
+  _lastShownErrorKey = key;
+  _lastShownErrorAt = now;
+  return false;
+}
+
 void _showRawSnackBar({
   String? description,
   String? title,
@@ -127,6 +160,10 @@ void _showRawSnackBar({
   bool? isTop = false,
   Color? backgroundColor,
 }) async {
+  if (_shouldSkipDuplicateSnack(title: title, description: description)) {
+    return;
+  }
+
   if (closeAllSnackbars) {
     Get.closeAllSnackbars();
   }

@@ -9,12 +9,14 @@ part of 'login_response.dart';
 LoginResponse _$LoginResponseFromJson(Map<String, dynamic> json) =>
     LoginResponse(
       accessToken: json['access_token'] as String,
+      refreshToken: json['refresh_token'] as String?,
       user: User.fromJson(json['user'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$LoginResponseToJson(LoginResponse instance) =>
     <String, dynamic>{
       'access_token': instance.accessToken,
+      'refresh_token': instance.refreshToken,
       'user': instance.user,
     };
 
@@ -45,6 +47,7 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
       ?.map((e) => e as String)
       .toList(),
   userId: json['userId'] as String?,
+  customerCode: _readCustomerCode(json, 'customerCode'),
   userName: json['userName'] as String?,
   uniqueId: json['uniqueId'] as String?,
   district: json['district'] as String?,
@@ -78,6 +81,7 @@ Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
   'staffRole': instance.staffRole,
   'permissions': instance.permissions,
   'userId': instance.userId,
+  'customerCode': instance.customerCode,
   'userName': instance.userName,
   'uniqueId': instance.uniqueId,
   'district': instance.district,
@@ -102,6 +106,8 @@ OutletData _$OutletDataFromJson(Map<String, dynamic> json) =>
         zomatoLink: json['zomatoLink'] as String?,
         gstinNumber: json['gstinNumber'] as String?,
         fssaiNumber: json['fssaiNumber'] as String?,
+        billHeaderMessage: json['billHeaderMessage'] as String?,
+        billFooterMessage: json['billFooterMessage'] as String?,
         outletAge: json['outletAge'] as String?,
         logo: json['logo'] as String?,
         createdAt: _readOutletCreatedAt(json, 'createdAt') as String?,
@@ -128,6 +134,8 @@ Map<String, dynamic> _$OutletDataToJson(OutletData instance) =>
       'zomatoLink': instance.zomatoLink,
       'gstinNumber': instance.gstinNumber,
       'fssaiNumber': instance.fssaiNumber,
+      'billHeaderMessage': instance.billHeaderMessage,
+      'billFooterMessage': instance.billFooterMessage,
       'outletAge': instance.outletAge,
       'logo': instance.logo,
       'createdAt': instance.createdAt,

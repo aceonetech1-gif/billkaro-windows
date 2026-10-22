@@ -8,6 +8,7 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/printer_dialog_widget.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/bill_tax_rows.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
@@ -22,6 +23,7 @@ import 'helpers/bluetooth_helper.dart';
 import 'helpers/network_printer_helper.dart';
 import 'helpers/windows_usb_printer_probe.dart';
 import 'builders/print_builder.dart';
+import 'generators/logo_generator.dart';
 import 'generators/qr_generator.dart';
 import 'helpers/text_helper.dart';
 
@@ -131,8 +133,6 @@ class ThermalPrinterService extends GetxController {
     return PrintBuilder(
       receiptWidth: receiptWidth ?? paper.receiptWidthChars,
       printAreaDots: paper.printAreaDots,
-      // 104mm: Font B so 64 cols fit even when the head stays at 80mm dots.
-      useCompactFont: paper == ThermalPaperSize.mm104,
     );
   }
 
@@ -1458,12 +1458,34 @@ class ThermalPrinterService extends GetxController {
     required double totalAmount,
     bool isBluetooth = false,
     String? upiId,
+
+    /// Logo path/URL; defaults to the selected outlet's logo.
+    String? logoUrl,
   }) async {
     final ok = await ensureConnectedForRole(PrintRole.bill);
     if (!ok) throw Exception('No bill printer connected');
 
+    final pref = Get.find<AppPref>();
+    // null skips the logo on both the thermal and PDF paths.
+    final storedLogo = pref.showLogoOnBill
+        ? logoUrl ?? pref.selectedOutlet?.logo
+        : null;
+    final showOutletName = pref.showOutletNameOnBill;
+    final headerMessage = pref.showBillHeader ? pref.billHeaderMessage : '';
+    final footerMessage = pref.showBillFooter ? pref.billFooterMessage : '';
+    final taxRows = billTaxRows(
+      lines: items.map((i) => (amount: i.salePrice * i.quantity, rate: i.gst)),
+      totalTax: totalTax,
+      split: pref.splitGstOnBill,
+    );
+
     if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
       await _printInvoiceWindowsPdf(
+        logoUrl: storedLogo,
+        showOutletName: showOutletName,
+        taxRows: taxRows,
+        headerMessage: headerMessage,
+        footerMessage: footerMessage,
         brandName: brandName,
         businessName: businessName,
         address: address,
@@ -1481,7 +1503,6 @@ class ThermalPrinterService extends GetxController {
         invoiceNo: invoiceNo,
         items: items,
         subtotal: subtotal,
-        totalTax: totalTax,
         serviceCharge: serviceCharge,
         discount: discount,
         totalAmount: totalAmount,
@@ -1495,13 +1516,25 @@ class ThermalPrinterService extends GetxController {
     final receiptW = _receiptWidth();
     final cols = _invoiceColumns(receiptW);
     final builder = _printBuilder(receiptWidth: receiptW);
-    // Header
-    builder
-      ..center()
-      ..boldDoubleHeight('$brandName\n')
-      ..boldNormal('')
-      ..text('$businessName\n')
-      ..text('$address\n');
+
+    // Business logo (top center); skipped silently if missing/unreachable.
+    final logo = await LogoGenerator.generateRaster(
+      storedLogo,
+      paperSize: selectedPaperSize.value,
+    );
+    if (logo.isNotEmpty) builder.bytes.addAll(logo);
+
+    // Header — empty lines are skipped so no blank rows are printed.
+    final brand = brandName.trim();
+    final outletName = businessName.trim();
+    final addressLine = address.trim();
+    builder.center();
+    if (headerMessage.isNotEmpty) builder.bold('$headerMessage\n');
+    if (brand.isNotEmpty) builder.boldDoubleHeight('$brand\n');
+    if (showOutletName && outletName.isNotEmpty) {
+      builder.text('$outletName\n');
+    }
+    if (addressLine.isNotEmpty) builder.text('$addressLine\n');
 
     final gst = (gstinNumber ?? '').trim();
     final fssai = (fssaiNumber ?? '').trim();
@@ -1518,7 +1551,6 @@ class ThermalPrinterService extends GetxController {
       ..center()
       ..bold('INVOICE\n')
       ..bold('*** $orderFrom ***\n')
-      ..text('\n')
       ..left();
 
     // Bill details
@@ -1591,9 +1623,9 @@ class ThermalPrinterService extends GetxController {
         '${TextHelper.moneyRow(label: 'Subtotal', amount: 'Rs${subtotal.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       );
 
-    if (totalTax > 0) {
+    for (final row in taxRows) {
       builder.text(
-        '${TextHelper.moneyRow(label: 'Tax (GST)', amount: 'Rs${totalTax.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
+        '${TextHelper.moneyRow(label: row.label, amount: 'Rs${row.amount.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       );
     }
     if (serviceCharge > 0) {
@@ -1612,19 +1644,21 @@ class ThermalPrinterService extends GetxController {
       ..bold(
         '${TextHelper.moneyRow(label: 'TOTAL', amount: 'Rs${totalAmount.toStringAsFixed(2)}', totalWidth: w, amountWidth: cols.amount)}\n',
       )
-      ..center()
-      ..text('\n')
-      ..bold('Terms & Conditions\n')
-      ..text('Thank you for doing\n')
-      ..text('business with us.\n');
+      ..center();
+
+    // Footer message replaces the default terms.
+    if (footerMessage.isNotEmpty) {
+      builder.text('$footerMessage\n');
+    } else {
+      builder
+        ..bold('Terms & Conditions\n')
+        ..text('Thank you for doing\n')
+        ..text('business with us.\n');
+    }
 
     // UPI QR Code (only if setting enabled)
-    final appPref = Get.find<AppPref>();
-    if (appPref.showQrOnBill && (upiId?.trim().isNotEmpty ?? false)) {
-      builder
-        ..text('\n')
-        ..bold('Scan to Pay\n')
-        ..text('\n');
+    if (pref.showQrOnBill && (upiId?.trim().isNotEmpty ?? false)) {
+      builder.bold('Scan to Pay\n');
 
       String transactionNote = 'Invoice: $invoiceNo';
       // GS v 0 solid-module raster — sharp on 2"/3"/4" without ESC * band gaps.
@@ -1636,10 +1670,7 @@ class ThermalPrinterService extends GetxController {
         paperSize: selectedPaperSize.value,
       );
 
-      if (qrCode.isNotEmpty) {
-        builder.bytes.addAll(qrCode);
-        builder.text('\n');
-      }
+      if (qrCode.isNotEmpty) builder.bytes.addAll(qrCode);
       builder
         ..text('UPI ID: $upiId\n')
         ..text('Amount: Rs${totalAmount.toStringAsFixed(2)}\n');
@@ -1856,38 +1887,73 @@ class ThermalPrinterService extends GetxController {
     required String invoiceNo,
     required List<OrderItem> items,
     required double subtotal,
-    required double totalTax,
+    required List<({String label, double amount})> taxRows,
     required double serviceCharge,
     required double discount,
     required double totalAmount,
     String? upiId,
+    String? logoUrl,
+    bool showOutletName = true,
+    String headerMessage = '',
+    String footerMessage = '',
   }) async {
     final doc = pw.Document();
     final paper = selectedPaperSize.value;
     final qrDisplay = paper.pdfQrDisplayMm * PdfPageFormat.mm;
+    final outletName = showOutletName ? businessName.trim() : '';
 
-    // IMPORTANT:
-    // `pdf` requires a finite page height for `pw.MultiPage`.
-    // Use a receipt-like width with a standard finite height; MultiPage will
-    // paginate automatically for longer receipts.
-    // Many Windows thermal printer drivers have non‑printable margins.
-    // Use a slightly narrower effective page width + smaller margins.
-    final pageFormat = PdfPageFormat(
-      paper.pdfPageWidthMm * PdfPageFormat.mm,
-      297 * PdfPageFormat.mm, // finite height; MultiPage paginates
-      marginAll: 4 * PdfPageFormat.mm,
-    );
+    final logoPng = await LogoGenerator.generatePng(logoUrl);
+    final logoImage = logoPng == null ? null : pw.MemoryImage(logoPng);
+    final logoHeader = <pw.Widget>[
+      if (logoImage != null) ...[
+        pw.Center(
+          child: pw.Image(
+            logoImage,
+            width: paper.pdfPageWidthMm * 0.95 * PdfPageFormat.mm,
+            height: 48 * PdfPageFormat.mm,
+            fit: pw.BoxFit.contain,
+          ),
+        ),
+        pw.SizedBox(height: 4),
+      ],
+    ];
+
+    final pageFormat = _receiptPageFormat(paper);
 
     pw.TextStyle t({double s = 9, bool b = false}) =>
         pw.TextStyle(fontSize: s, fontWeight: b ? pw.FontWeight.bold : null);
 
+    final headerMessageWidgets = <pw.Widget>[
+      if (headerMessage.isNotEmpty)
+        pw.Center(
+          child: pw.Text(
+            headerMessage,
+            style: t(b: true),
+            textAlign: pw.TextAlign.center,
+          ),
+        ),
+    ];
+    // Footer message replaces the default thank-you line.
+    final closingLine = pw.Center(
+      child: pw.Text(
+        footerMessage.isNotEmpty
+            ? footerMessage
+            : 'Thank you for doing business with us.',
+        style: t(),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+
     doc.addPage(
-      pw.MultiPage(
+      pw.Page(
         pageFormat: pageFormat,
-        build: (_) => [
-          pw.Center(child: pw.Text(brandName, style: t(s: 13, b: true))),
-          if (businessName.isNotEmpty)
-            pw.Center(child: pw.Text(businessName, style: t(b: true))),
+        build: (_) => _receiptColumn([
+          ...logoHeader,
+          ...headerMessageWidgets,
+          if (brandName.isNotEmpty)
+            pw.Center(child: pw.Text(brandName, style: t(s: 13, b: true))),
+          if (outletName.isNotEmpty)
+            pw.Center(child: pw.Text(outletName, style: t(b: true))),
           if (address.isNotEmpty)
             pw.Center(child: pw.Text(address, style: t())),
           // pw.Center(child: pw.Text('$city, $zipcode', style: t())),
@@ -2029,7 +2095,7 @@ class ThermalPrinterService extends GetxController {
           pw.SizedBox(height: 6),
           pw.Divider(),
           _totRow('Subtotal', subtotal, t),
-          if (totalTax > 0) _totRow('Tax (GST)', totalTax, t),
+          for (final row in taxRows) _totRow(row.label, row.amount, t),
           if (serviceCharge > 0) _totRow('Service Charge', serviceCharge, t),
           if (discount > 0) _totRow('Discount', -discount, t),
           pw.Row(
@@ -2043,12 +2109,10 @@ class ThermalPrinterService extends GetxController {
             ],
           ),
           pw.SizedBox(height: 10),
-          pw.Center(
-            child: pw.Text('Thank you for doing business with us.', style: t()),
-          ),
+          closingLine,
           if ((upiId ?? '').trim().isNotEmpty)
             pw.Center(child: pw.Text('UPI: ${upiId!.trim()}', style: t(s: 8))),
-        ],
+        ]),
       ),
     );
 
@@ -2066,12 +2130,17 @@ class ThermalPrinterService extends GetxController {
 
         final withQr = pw.Document();
         withQr.addPage(
-          pw.MultiPage(
+          pw.Page(
             pageFormat: pageFormat,
-            build: (_) => [
-              pw.Center(child: pw.Text(brandName, style: t(s: 13, b: true))),
-              if (businessName.isNotEmpty)
-                pw.Center(child: pw.Text(businessName, style: t(b: true))),
+            build: (_) => _receiptColumn([
+              ...logoHeader,
+              ...headerMessageWidgets,
+              if (brandName.isNotEmpty)
+                pw.Center(
+                  child: pw.Text(brandName, style: t(s: 13, b: true)),
+                ),
+              if (outletName.isNotEmpty)
+                pw.Center(child: pw.Text(outletName, style: t(b: true))),
               if (address.isNotEmpty)
                 pw.Center(child: pw.Text(address, style: t())),
               if ((gstinNumber ?? '').trim().isNotEmpty)
@@ -2194,7 +2263,7 @@ class ThermalPrinterService extends GetxController {
               pw.SizedBox(height: 6),
               pw.Divider(),
               _totRow('Subtotal', subtotal, t),
-              if (totalTax > 0) _totRow('Tax (GST)', totalTax, t),
+              for (final row in taxRows) _totRow(row.label, row.amount, t),
               if (serviceCharge > 0)
                 _totRow('Service Charge', serviceCharge, t),
               if (discount > 0) _totRow('Discount', -discount, t),
@@ -2211,12 +2280,7 @@ class ThermalPrinterService extends GetxController {
                 ],
               ),
               pw.SizedBox(height: 10),
-              pw.Center(
-                child: pw.Text(
-                  'Thank you for doing business with us.',
-                  style: t(),
-                ),
-              ),
+              closingLine,
               pw.SizedBox(height: 8),
               pw.Center(child: pw.Text('Scan to Pay', style: t(b: true))),
               pw.SizedBox(height: 6),
@@ -2229,7 +2293,7 @@ class ThermalPrinterService extends GetxController {
               ),
               pw.SizedBox(height: 6),
               pw.Center(child: pw.Text('UPI: ${upiId.trim()}', style: t(s: 8))),
-            ],
+            ]),
           ),
         );
 
@@ -2242,6 +2306,20 @@ class ThermalPrinterService extends GetxController {
 
     await Printing.layoutPdf(onLayout: (_) async => doc.save());
   }
+
+  /// Receipt-width page whose height grows with the content, so Windows
+  /// drivers don't feed a full A4-length strip of blank paper. Width is a bit
+  /// narrower than the roll because many drivers have non-printable margins.
+  PdfPageFormat _receiptPageFormat(ThermalPaperSize paper) => PdfPageFormat(
+    paper.pdfPageWidthMm * PdfPageFormat.mm,
+    double.infinity,
+    marginAll: 4 * PdfPageFormat.mm,
+  );
+
+  pw.Widget _receiptColumn(List<pw.Widget> children) => pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+    children: children,
+  );
 
   pw.Widget _totRow(
     String label,
@@ -2274,20 +2352,15 @@ class ThermalPrinterService extends GetxController {
     required int totalQuantity,
   }) async {
     final doc = pw.Document();
-    final paper = selectedPaperSize.value;
-    final pageFormat = PdfPageFormat(
-      paper.pdfPageWidthMm * PdfPageFormat.mm,
-      297 * PdfPageFormat.mm, // finite height; MultiPage paginates if needed
-      marginAll: 4 * PdfPageFormat.mm,
-    );
+    final pageFormat = _receiptPageFormat(selectedPaperSize.value);
 
     pw.TextStyle t({double s = 9, bool b = false}) =>
         pw.TextStyle(fontSize: s, fontWeight: b ? pw.FontWeight.bold : null);
 
     doc.addPage(
-      pw.MultiPage(
+      pw.Page(
         pageFormat: pageFormat,
-        build: (_) => [
+        build: (_) => _receiptColumn([
           pw.Center(child: pw.Text('KOT', style: t(s: 14, b: true))),
           if (businessName.isNotEmpty)
             pw.Center(child: pw.Text(businessName, style: t(b: true))),
@@ -2360,7 +2433,7 @@ class ThermalPrinterService extends GetxController {
           ],
           pw.SizedBox(height: 10),
           pw.Center(child: pw.Text('--- End of KOT ---', style: t())),
-        ],
+        ]),
       ),
     );
 

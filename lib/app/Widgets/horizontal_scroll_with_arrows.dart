@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 class HorizontalScrollWithArrows extends StatefulWidget {
@@ -60,6 +61,20 @@ class _HorizontalScrollWithArrowsState extends State<HorizontalScrollWithArrows>
     );
   }
 
+  /// Mouse wheel sends vertical delta; map it to horizontal scroll on desktop.
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_controller.hasClients) return;
+    final delta = event.scrollDelta.dx != 0
+        ? event.scrollDelta.dx
+        : event.scrollDelta.dy;
+    if (delta == 0) return;
+    final target = (_controller.offset + delta).clamp(
+      _controller.position.minScrollExtent,
+      _controller.position.maxScrollExtent,
+    );
+    _controller.jumpTo(target);
+  }
+
   @override
   void dispose() {
     _controller.removeListener(_updateArrows);
@@ -78,19 +93,29 @@ class _HorizontalScrollWithArrowsState extends State<HorizontalScrollWithArrows>
           onPressed: () => _scrollBy(-widget.scrollStep),
         ),
         Expanded(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is ScrollUpdateNotification ||
-                  notification is ScrollMetricsNotification) {
-                _updateArrows();
-              }
-              return false;
-            },
-            child: SingleChildScrollView(
-              controller: _controller,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: widget.child,
+          child: Listener(
+            onPointerSignal: _onPointerSignal,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification ||
+                    notification is ScrollMetricsNotification) {
+                  _updateArrows();
+                }
+                return false;
+              },
+              child: Scrollbar(
+                controller: _controller,
+                thumbVisibility: true,
+                trackVisibility: true,
+                interactive: true,
+                scrollbarOrientation: ScrollbarOrientation.bottom,
+                child: SingleChildScrollView(
+                  controller: _controller,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: widget.child,
+                ),
+              ),
             ),
           ),
         ),
@@ -123,7 +148,7 @@ class _ScrollArrowButton extends StatelessWidget {
     final theme = Theme.of(context);
     final color = enabled
         ? theme.colorScheme.onSurface
-        : theme.colorScheme.onSurface.withOpacity(0.28);
+        : theme.colorScheme.onSurface.withValues(alpha: 0.28);
 
     return SizedBox(
       width: size,

@@ -54,6 +54,13 @@ abstract class HomeMainRoutes {
   static const subscriptionForm = '/subscription-form';
   static const subscriptionReview = '/subscriptionReview';
 
+  /// Hide the app shell sidebar for immersive create-order and screens opened from it.
+  static bool hidesShellSidebar(String path, [Object? args]) {
+    if (path.startsWith(createOrder)) return true;
+    final map = args is Map ? args : null;
+    return map?['fromCreateOrder'] == true;
+  }
+
   /// Cafe / restaurant outlets (matches business type from outlet profile).
   static bool outletIsCafeOrRestaurant() {
     if (Get.isRegistered<HomeScreenController>()) {

@@ -576,7 +576,7 @@ class _OutletAvatar extends StatelessWidget {
         imageUrl: resolvedMediaUrl(logoUrl),
         width: 42,
         height: 42,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         placeholder: (_, __) => fallback,
         errorWidget: (_, __, ___) => fallback,
       ),

@@ -30,10 +30,7 @@ class TableQrPrintService {
     final entries = tables
         .where((t) => menuUrlForTable(t).isNotEmpty)
         .map(
-          (t) => (
-            tableDisplayName: t.displayName,
-            menuUrl: menuUrlForTable(t),
-          ),
+          (t) => (tableDisplayName: t.displayName, menuUrl: menuUrlForTable(t)),
         )
         .toList(growable: false);
 

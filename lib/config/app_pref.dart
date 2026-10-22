@@ -11,6 +11,7 @@ class AppPref {
   static String keyUsers = 'saved_users';
   static const String keyCurrentUser = 'current_user';
   static const String keyToken = 'token';
+  static const String keyRefreshToken = 'refresh_token';
   static const String keyUser = 'user';
   static const String keySelectedOutlet = 'selected_outlet';
   static const String prefixUserPassword = 'user_password_';
@@ -25,10 +26,16 @@ class AppPref {
       'kitchen_new_order_notified_keys';
   static const String keyAppNotificationsJson = 'app_notifications_json';
   static const String keyShowQrOnBill = 'show_qr_on_bill';
+  static const String keyShowLogoOnBill = 'show_logo_on_bill';
+  static const String keyShowOutletNameOnBill = 'show_outlet_name_on_bill';
+  static const String keyShowBillHeader = 'show_bill_header';
+  static const String keyShowBillFooter = 'show_bill_footer';
+  static const String keyShowGstSplitOnBill = 'show_gst_split_on_bill';
   static const String keyShowAddDetailsOnCreateOrder =
       'show_add_details_on_create_order';
   static const String keyDownloadPath = 'download_path';
   static const String keyQrMenuBaseUrl = 'qr_menu_base_url';
+  static const String keyInventoryEnabled = 'inventory_enabled';
   static const String keyAutoSyncEnabled = 'auto_sync_enabled';
   static const String keyOfflineModeEnabled = 'offline_mode_enabled';
   static const String keyCashDrawerEnabled = 'cash_drawer_enabled';
@@ -67,6 +74,11 @@ class AppPref {
 
   String get token => _preferences.getString('token') ?? '';
   set token(String value) => _preferences.setString('token', value);
+
+  String get refreshToken =>
+      _preferences.getString(keyRefreshToken) ?? '';
+  set refreshToken(String value) =>
+      _preferences.setString(keyRefreshToken, value);
 
   User? get user => _preferences.containsKey(keyUser)
       ? User.fromJson(
@@ -205,6 +217,50 @@ class AppPref {
   /// 👉 Show QR code on bill/invoice (UPI scan to pay)
   bool get showQrOnBill => _preferences.getBool(keyShowQrOnBill) ?? true;
   set showQrOnBill(bool value) => _preferences.setBool(keyShowQrOnBill, value);
+
+  bool get showLogoOnBill => _preferences.getBool(keyShowLogoOnBill) ?? true;
+  set showLogoOnBill(bool value) =>
+      _preferences.setBool(keyShowLogoOnBill, value);
+
+  /// 👉 Show selected outlet's name under the brand name on printed bills
+  bool get showOutletNameOnBill =>
+      _preferences.getBool(keyShowOutletNameOnBill) ?? true;
+  set showOutletNameOnBill(bool value) =>
+      _preferences.setBool(keyShowOutletNameOnBill, value);
+
+  /// 👉 Show the header / footer messages on bills (messages are kept either way)
+  bool get showBillHeader => _preferences.getBool(keyShowBillHeader) ?? true;
+  set showBillHeader(bool value) =>
+      _preferences.setBool(keyShowBillHeader, value);
+
+  bool get showBillFooter => _preferences.getBool(keyShowBillFooter) ?? true;
+  set showBillFooter(bool value) =>
+      _preferences.setBool(keyShowBillFooter, value);
+
+  /// 👉 Show GST as CGST + SGST on bills
+  bool get showGstSplitOnBill =>
+      _preferences.getBool(keyShowGstSplitOnBill) ?? true;
+  set showGstSplitOnBill(bool value) =>
+      _preferences.setBool(keyShowGstSplitOnBill, value);
+
+  /// CGST/SGST only apply to a GST-registered outlet (one with a GSTIN).
+  bool get splitGstOnBill =>
+      showGstSplitOnBill &&
+      (selectedOutlet?.gstinNumber?.trim().isNotEmpty ?? false);
+
+  /// Selected outlet's message shown below the logo on bills and the QR menu.
+  String get billHeaderMessage =>
+      selectedOutlet?.billHeaderMessage?.trim() ?? '';
+
+  /// Selected outlet's message shown at the bottom of bills.
+  String get billFooterMessage =>
+      selectedOutlet?.billFooterMessage?.trim() ?? '';
+
+  /// Inventory management (stock, suppliers, recipes, purchase orders).
+  bool get inventoryEnabled =>
+      _preferences.getBool(keyInventoryEnabled) ?? true;
+  set inventoryEnabled(bool value) =>
+      _preferences.setBool(keyInventoryEnabled, value);
 
   /// 👉 Show "Add Details" on create order (customer, table, discounts, etc.)
   bool get showAddDetailsOnCreateOrder =>
@@ -507,6 +563,7 @@ class AppPref {
   /// Clear only auth data
   Future<bool> clearAuthData() async {
     await _preferences.remove(keyToken);
+    await _preferences.remove(keyRefreshToken);
     await _preferences.remove(keyUser);
     await _preferences.remove(keyCurrentUser);
     await _preferences.remove(keySelectedOutlet);

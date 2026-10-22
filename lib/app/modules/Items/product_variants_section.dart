@@ -153,19 +153,31 @@ class ProductVariantsSection extends StatelessWidget {
                 ),
               );
             }),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onAddVariant,
-                icon: Icon(Icons.add, color: AppColor.primary, size: 18),
-                label: Text(
-                  'Add Variant',
-                  style: TextStyle(
-                    color: AppColor.primary,
-                    fontWeight: FontWeight.w600,
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: onAddVariant,
+                  icon: Icon(Icons.add, color: AppColor.primary, size: 18),
+                  label: Text(
+                    'Add Variant',
+                    style: TextStyle(
+                      color: AppColor.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => onEnabledChanged(false),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
             Text(
               'Mark one variant as default. Base price should match it.',

@@ -2100,6 +2100,71 @@ class AppLocalizationsHi extends AppLocalizations {
       'इनवॉइस और प्रिंट पर UPI स्कैन-टू-पे QR दिखाएं';
 
   @override
+  String get show_logo_on_bill => 'बिल पर लोगो दिखाएं';
+
+  @override
+  String get show_logo_on_bill_subtitle =>
+      'इनवॉइस और प्रिंट पर बिज़नेस लोगो दिखाएं';
+
+  @override
+  String get show_outlet_name_on_bill => 'बिल पर आउटलेट का नाम दिखाएं';
+
+  @override
+  String get show_outlet_name_on_bill_subtitle =>
+      'ब्रांड नाम के नीचे आउटलेट का नाम प्रिंट करें';
+
+  @override
+  String get show_bill_header => 'बिल पर हेडर दिखाएं';
+
+  @override
+  String get show_bill_header_subtitle => 'बिल के ऊपर हेडर संदेश प्रिंट करें';
+
+  @override
+  String get show_bill_footer => 'बिल पर फ़ुटर दिखाएं';
+
+  @override
+  String get show_bill_footer_subtitle =>
+      'कुल राशि के बाद फ़ुटर संदेश प्रिंट करें';
+
+  @override
+  String get show_gst_split_on_bill => 'बिल पर CGST और SGST दिखाएं';
+
+  @override
+  String get show_gst_split_on_bill_subtitle =>
+      'GST को CGST और SGST में बांटें (केवल जब आउटलेट का GSTIN हो)';
+
+  @override
+  String get bill_header_footer => 'बिल हेडर और फ़ुटर';
+
+  @override
+  String get bill_header_footer_subtitle =>
+      'बिल के ऊपर और नीचे प्रिंट होने वाले कस्टम संदेश';
+
+  @override
+  String get bill_header_message => 'हेडर संदेश';
+
+  @override
+  String get bill_header_message_hint =>
+      'जैसे: स्वागत है! शुद्ध शाकाहारी रेस्टोरेंट';
+
+  @override
+  String get bill_footer_message => 'फ़ुटर संदेश';
+
+  @override
+  String get bill_footer_message_hint =>
+      'जैसे: फिर से पधारें! बिका हुआ माल वापस नहीं होगा';
+
+  @override
+  String get bill_header_footer_saved => 'बिल हेडर और फ़ुटर सेव हो गया';
+
+  @override
+  String get enable_inventory => 'इन्वेंटरी प्रबंधन';
+
+  @override
+  String get enable_inventory_subtitle =>
+      'स्टॉक, आपूर्तिकर्ता, रेसिपी और खरीद ऑर्डर सक्षम करें';
+
+  @override
   String get add_details_on_create_order => 'ऑर्डर बनाते समय विवरण जोड़ें';
 
   @override

@@ -6,17 +6,14 @@ enum ThermalPaperSize {
   mm58,
 
   /// 3 inch (80 mm)
-  mm80,
-
-  /// 4 inch (104 mm)
-  mm104;
+  mm80;
 
   static ThermalPaperSize fromStorageKey(String? key) {
     switch (key) {
       case '80':
-        return ThermalPaperSize.mm80;
+      // Legacy 4" (104 mm) setting falls back to 3" now that 4" is removed.
       case '104':
-        return ThermalPaperSize.mm104;
+        return ThermalPaperSize.mm80;
       case '58':
       default:
         return ThermalPaperSize.mm58;
@@ -26,16 +23,13 @@ enum ThermalPaperSize {
 
 extension ThermalPaperSizeX on ThermalPaperSize {
   /// Monospace character width used by [PrintBuilder] and receipt layout.
-  /// Font A (~12 dots/char). 104mm uses 64 (not 68/69) so lines never wrap
-  /// on common 4" clones that still buffer like a wide 80mm head.
+  /// Font A (~12 dots/char).
   int get receiptWidthChars {
     switch (this) {
       case ThermalPaperSize.mm58:
         return 32; // 384 / 12
       case ThermalPaperSize.mm80:
         return 48; // 576 / 12
-      case ThermalPaperSize.mm104:
-        return 64;
     }
   }
 
@@ -46,19 +40,15 @@ extension ThermalPaperSizeX on ThermalPaperSize {
         return 384;
       case ThermalPaperSize.mm80:
         return 576;
-      case ThermalPaperSize.mm104:
-        return 832;
     }
   }
 
-  /// Closest ESC/POS paper profile (library has no 104 mm preset).
+  /// ESC/POS paper profile.
   PaperSize get escPosPaperSize {
     switch (this) {
       case ThermalPaperSize.mm58:
         return PaperSize.mm58;
       case ThermalPaperSize.mm80:
-      case ThermalPaperSize.mm104:
-        // Library max is 80 mm / 576 dots; bill text uses [printAreaDots] instead.
         return PaperSize.mm80;
     }
   }
@@ -69,8 +59,6 @@ extension ThermalPaperSizeX on ThermalPaperSize {
         return '58';
       case ThermalPaperSize.mm80:
         return '80';
-      case ThermalPaperSize.mm104:
-        return '104';
     }
   }
 
@@ -78,10 +66,6 @@ extension ThermalPaperSizeX on ThermalPaperSize {
   invoiceColumns() {
     final w = receiptWidthChars;
     // Sums must equal [w] exactly — any overflow wraps and breaks alignment.
-    if (w >= 64) {
-      // 26+6+10+6+16 = 64
-      return (w: w, item: 26, qty: 6, price: 10, gst: 6, amount: 16);
-    }
     if (w >= 48) {
       // 18+5+8+5+12 = 48
       return (w: w, item: 18, qty: 5, price: 8, gst: 5, amount: 12);
@@ -94,11 +78,9 @@ extension ThermalPaperSizeX on ThermalPaperSize {
   int get qrModuleDots {
     switch (this) {
       case ThermalPaperSize.mm58:
-        return 7;
+        return 5;
       case ThermalPaperSize.mm80:
-        return 9;
-      case ThermalPaperSize.mm104:
-        return 10;
+        return 6;
     }
   }
 
@@ -106,26 +88,42 @@ extension ThermalPaperSizeX on ThermalPaperSize {
   int get qrMaxDots {
     switch (this) {
       case ThermalPaperSize.mm58:
-        return 320; // 58mm ≈ 384 dots
+        return 220; // 58mm ≈ 384 dots
       case ThermalPaperSize.mm80:
-        return 448; // 80mm ≈ 576 dots
-      case ThermalPaperSize.mm104:
-        return 512; // keep within common raster buffers
+        return 300; // 80mm ≈ 576 dots
     }
   }
 
   /// Target QR bitmap width in printer dots (snapped to whole modules later).
   int get qrBitmapSize => qrMaxDots;
 
+  /// Max logo raster width (dots) at the top of bills; multiple of 8.
+  int get logoMaxWidthDots {
+    switch (this) {
+      case ThermalPaperSize.mm58:
+        return 368; // 58mm ≈ 384 dots
+      case ThermalPaperSize.mm80:
+        return 552; // 80mm ≈ 576 dots
+    }
+  }
+
+  /// Max logo raster height (dots) so tall logos do not waste paper.
+  int get logoMaxHeightDots {
+    switch (this) {
+      case ThermalPaperSize.mm58:
+        return 280;
+      case ThermalPaperSize.mm80:
+        return 360;
+    }
+  }
+
   /// Native ESC/POS QR module size (1–16; capped for cheap clone printers).
   int get escPosQrModuleSize {
     switch (this) {
       case ThermalPaperSize.mm58:
-        return 6;
+        return 4;
       case ThermalPaperSize.mm80:
-        return 8;
-      case ThermalPaperSize.mm104:
-        return 8;
+        return 5;
     }
   }
 
@@ -136,8 +134,6 @@ extension ThermalPaperSizeX on ThermalPaperSize {
         return 54;
       case ThermalPaperSize.mm80:
         return 76;
-      case ThermalPaperSize.mm104:
-        return 100;
     }
   }
 
@@ -145,11 +141,9 @@ extension ThermalPaperSizeX on ThermalPaperSize {
   double get pdfQrDisplayMm {
     switch (this) {
       case ThermalPaperSize.mm58:
-        return 32;
+        return 24;
       case ThermalPaperSize.mm80:
-        return 42;
-      case ThermalPaperSize.mm104:
-        return 56;
+        return 30;
     }
   }
 }

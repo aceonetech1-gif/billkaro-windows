@@ -511,7 +511,7 @@ class _Logo extends StatelessWidget {
         child: hasLogo
             ? AppCachedNetworkImage(
                 imageUrl: resolvedMediaUrl(logoUrl!.trim()),
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 placeholder: (_, __) => _fallback(),
                 errorWidget: (_, __, ___) => _fallback(),
               )

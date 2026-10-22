@@ -5,7 +5,6 @@ class PrintBuilder {
   /// Receipt row width for monospace ESC/POS text.
   /// - 58mm (2"): 32 chars
   /// - 80mm (3"): 48 chars
-  /// - 104mm (4"): 64 chars
   final int receiptWidth;
   final int _lineWidth;
   final int _printAreaDots;

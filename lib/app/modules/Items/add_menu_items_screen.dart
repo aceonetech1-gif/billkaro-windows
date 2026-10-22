@@ -880,27 +880,29 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
 
                   const SizedBox(height: 28),
 
-                  Obx(() {
-                    final isEdit = controller.isEdit.value;
-                    final itemId = controller.itemId.value;
-                    return Column(
+                  Obx(
+                    () => Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Divider(),
                         const SizedBox(height: 18),
                         MenuItemRecipeSection(
-                          itemId: isEdit ? itemId : '',
-                          itemName: controller.itemNameController.text,
+                          itemId: controller.isEdit.value
+                              ? controller.itemId.value
+                              : '',
+                          linkedRawMaterialId:
+                              controller.linkedRawMaterialId.value,
                           linkedRecipeItemId:
                               controller.linkedRecipeItemId.value,
-                          onLinkedRecipeChanged: (id) {
-                            controller.linkedRecipeItemId.value = id;
-                          },
+                          onLinkedRawMaterialChanged:
+                              controller.setLinkedRawMaterial,
+                          onLinkedRecipeChanged:
+                              controller.setLinkedRecipeItem,
                         ),
                         const SizedBox(height: 18),
                       ],
-                    );
-                  }),
+                    ),
+                  ),
 
                   buildButtons(),
                   const SizedBox(height: 18),

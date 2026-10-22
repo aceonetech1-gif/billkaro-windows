@@ -89,7 +89,7 @@ class _HeaderExpanded extends StatelessWidget {
                   imageUrl: resolvedMediaUrl(outlet.logo as String),
                   width: 40,
                   height: 40,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   placeholder: (_, __) => const _LogoPlaceholder(),
                   errorWidget: (_, __, ___) => const _LogoPlaceholder(),
                 )

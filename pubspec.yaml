@@ -140,6 +140,7 @@ flutter:
     - assets/lottie/loading.json
     - assets/svg/
     - .env
+    - shorebird.yaml
 
   fonts:
     - family: Lexend

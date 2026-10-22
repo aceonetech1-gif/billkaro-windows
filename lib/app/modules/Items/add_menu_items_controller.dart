@@ -21,6 +21,8 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 import 'package:billkaro/utils/staff_access.dart';
 import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
+import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
+import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 
 class AddMenuItemController extends BaseController {
   static const String comboCategoryName = 'combo';
@@ -62,6 +64,8 @@ class AddMenuItemController extends BaseController {
   var selectedSoldBy = 'Each'.obs;
   var selectedPosColor = ''.obs;
   final linkedRecipeItemId = ''.obs;
+  final linkedRawMaterialId = ''.obs;
+  final inventoryLinkDirty = false.obs;
 
   static const soldByOptions = ['Each', 'Weight', 'Open'];
   static const posColorOptions = <String>[
@@ -1656,8 +1660,12 @@ class AddMenuItemController extends BaseController {
       soldBy: selectedSoldBy.value,
       costPrice: double.tryParse(costPriceController.text) ?? 0.0,
       posColor: selectedPosColor.value,
-      trackStock: trackStock.value,
-      stockQuantity: double.tryParse(stockController.text) ?? 0.0,
+      trackStock: linkedRawMaterialId.value.trim().isNotEmpty
+          ? false
+          : trackStock.value,
+      stockQuantity: linkedRawMaterialId.value.trim().isNotEmpty
+          ? 0.0
+          : (double.tryParse(stockController.text) ?? 0.0),
       minStock: double.tryParse(minStockController.text) ?? 0.0,
       prepTimeMinutes: _parsedPrepTimeMinutes(),
       isCombo: isComboItem.value,
@@ -1676,6 +1684,7 @@ class AddMenuItemController extends BaseController {
       selectedImage.value = null;
       imagePath.value = '';
       aiScanResult.value = null;
+      await _syncInventoryLink(saved.id);
       await _refreshRelatedLists();
       Get.back();
       dismissAllAppLoader();
@@ -1726,6 +1735,8 @@ class AddMenuItemController extends BaseController {
     imagePath.value = '';
     aiScanResult.value = null;
     linkedRecipeItemId.value = '';
+    linkedRawMaterialId.value = '';
+    inventoryLinkDirty.value = false;
     clearVariantDrafts();
     hasVariantsEnabled.value = false;
 
@@ -1781,6 +1792,67 @@ class AddMenuItemController extends BaseController {
         ? 'None'
         : '${double.parse(item.gst.toString()).toInt()}';
     loadVariantsFromItem(item);
+    _loadLinkedRawMaterial(item.id);
+  }
+
+  Future<void> _loadLinkedRawMaterial(String savedItemId) async {
+    if (savedItemId.trim().isEmpty) return;
+    final inventory = Get.isRegistered<InventoryController>()
+        ? Get.find<InventoryController>()
+        : Get.put(InventoryController());
+    await inventory.loadRecipeData();
+    final recipes = inventory.recipesForItem(savedItemId);
+    linkedRawMaterialId.value =
+        recipes.isNotEmpty ? recipes.first.rawMaterialId : '';
+    inventoryLinkDirty.value = false;
+  }
+
+  InventoryController _inventoryController() {
+    return Get.isRegistered<InventoryController>()
+        ? Get.find<InventoryController>()
+        : Get.put(InventoryController());
+  }
+
+  void setLinkedRawMaterial(String id) {
+    linkedRawMaterialId.value = id.trim();
+    if (linkedRawMaterialId.value.isNotEmpty) {
+      linkedRecipeItemId.value = '';
+    }
+    inventoryLinkDirty.value = true;
+  }
+
+  void setLinkedRecipeItem(String id) {
+    linkedRecipeItemId.value = id.trim();
+    if (linkedRecipeItemId.value.isNotEmpty) {
+      linkedRawMaterialId.value = '';
+      inventoryLinkDirty.value = true;
+    }
+  }
+
+  Future<void> _syncInventoryLink(String savedItemId) async {
+    if (savedItemId.trim().isEmpty || !inventoryLinkDirty.value) return;
+    final inventory = _inventoryController();
+    await inventory.loadRecipeData();
+    final materialId = linkedRawMaterialId.value.trim();
+    if (materialId.isEmpty) {
+      await inventory.deleteRecipesForItem(savedItemId);
+      return;
+    }
+    final material = inventory.rawMaterials.firstWhereOrNull(
+      (m) => m.id == materialId,
+    );
+    await inventory.saveRecipesForItem(
+      itemId: savedItemId,
+      ingredients: [
+        RecipeLineInput(
+          rawMaterialId: materialId,
+          quantity: 1,
+          unit: (material?.unit.trim().isNotEmpty == true)
+              ? material!.unit
+              : 'NOS',
+        ),
+      ],
+    );
   }
 
   void _applyCategoryFromArgs(dynamic categoryArg) {
@@ -1864,6 +1936,8 @@ class AddMenuItemController extends BaseController {
     isComboItem.value = false;
     comboComponentQuantities.clear();
     linkedRecipeItemId.value = '';
+    linkedRawMaterialId.value = '';
+    inventoryLinkDirty.value = false;
     clearVariantDrafts();
     hasVariantsEnabled.value = false;
   }
@@ -1899,8 +1973,12 @@ class AddMenuItemController extends BaseController {
       soldBy: selectedSoldBy.value,
       costPrice: double.tryParse(costPriceController.text) ?? 0.0,
       posColor: selectedPosColor.value,
-      trackStock: trackStock.value,
-      stockQuantity: double.tryParse(stockController.text) ?? 0.0,
+      trackStock: linkedRawMaterialId.value.trim().isNotEmpty
+          ? false
+          : trackStock.value,
+      stockQuantity: linkedRawMaterialId.value.trim().isNotEmpty
+          ? 0.0
+          : (double.tryParse(stockController.text) ?? 0.0),
       minStock: double.tryParse(minStockController.text) ?? 0.0,
       prepTimeMinutes: _parsedPrepTimeMinutes(),
       isCombo: isComboItem.value,
@@ -1915,6 +1993,7 @@ class AddMenuItemController extends BaseController {
     ).saveItemOnlineOrOffline(request: request);
 
     if (saved != null) {
+      await _syncInventoryLink(saved.id);
       await _refreshRelatedLists();
       showSuccess(description: 'Item added successfully');
       resetForm();

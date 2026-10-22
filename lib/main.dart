@@ -12,6 +12,7 @@ import 'package:billkaro/app/services/local_store/local_store_host_service.dart'
 import 'package:billkaro/app/services/local_store/local_store_session.dart';
 import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/app_binding.dart';
+import 'package:billkaro/config/app_scroll_behavior.dart';
 import 'package:billkaro/config/app_theme.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
@@ -89,7 +90,7 @@ void main(List<String> args) async {
           appWindow.minSize = const Size(1024, 640);
           appWindow.size = const Size(1280, 720);
           appWindow.alignment = Alignment.center;
-          appWindow.title = 'Billkaro ChillKaro';
+          appWindow.title = 'Billkaro ChillKaro (patch test 1)';
         }
         appWindow.show();
       });
@@ -393,6 +394,7 @@ class MyApp extends StatelessWidget {
               theme: AppTheme.lightThemeWithPrimary(selectedPrimary),
               darkTheme: AppTheme.darkThemeWithPrimary(selectedPrimary),
               themeMode: themeController.themeMode.value,
+              scrollBehavior: const AppScrollBehavior(),
               initialBinding: AppBinding(),
               locale: languageController.appLocale.value,
               fallbackLocale: const Locale('en'),
@@ -419,6 +421,7 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.appTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.light,
+        scrollBehavior: const AppScrollBehavior(),
         initialBinding: AppBinding(),
         locale: appLocale,
         fallbackLocale: const Locale('en'),

@@ -22,6 +22,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -191,9 +192,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         _occupiedTablesSection(loc: loc, isDesktop: isDesktop),
                         const SizedBox(height: _sectionGap),
                       ],
-                      if (StaffAccess.canViewInventory) ...[
-                        _lowStockSection(loc),
-                      ],
+                      Obx(() {
+                        controller.inventoryEnabled.value;
+                        if (!StaffAccess.canViewInventory) {
+                          return const SizedBox.shrink();
+                        }
+                        return _lowStockSection(loc);
+                      }),
                       _quickActions(loc, isDesktop: isDesktop),
                       if (StaffAccess.canViewDashboardInsights) ...[
                         const SizedBox(height: _sectionGap),
@@ -456,6 +461,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _lowStockSection(AppLocalizations loc) {
     return Obx(() {
+      if (controller.isHomeLoading.value) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(loc.section_low_stock_alerts, subtitle: '…'),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
+              child: _homeShimmer(
+                child: Column(
+                  children: [
+                    for (var i = 0; i < 2; i++) ...[
+                      if (i > 0) const SizedBox(height: 8),
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: _sectionGap),
+          ],
+        );
+      }
+
       final items = controller.lowStockItems;
       if (items.isEmpty) return const SizedBox.shrink();
 
@@ -760,10 +795,50 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
           child: Obx(() {
+            if (controller.isHomeLoading.value) {
+              return _homeShimmer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 8,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: isDesktop
+                            ? 5
+                            : (Get.width >= 480 ? 4 : 2),
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: isDesktop
+                            ? 1.4
+                            : (Get.width >= 480 ? 1.2 : 1.6),
+                      ),
+                      itemBuilder: (_, __) => Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
             final kotVisible =
                 controller.isKOT.value &&
                 HomeMainRoutes.outletIsCafeOrRestaurant();
             controller.selectedOutlet.value;
+            controller.inventoryEnabled.value;
             final showTables = HomeMainRoutes.outletShowsTables();
             final actions = <Map<String, dynamic>>[
               if (StaffAccess.canShowOrdersList)
@@ -920,6 +995,38 @@ class _HomeScreenState extends State<HomeScreen> {
     required bool isDesktop,
   }) {
     return Obx(() {
+      if (controller.isHomeLoading.value) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              loc.home_occupied_tables,
+              subtitle: loc.home_live_dine_in_tables,
+            ),
+            const SizedBox(height: 12),
+            _homeShimmer(
+              child: SizedBox(
+                height: isDesktop ? 142 : 146,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, __) => Container(
+                    width: isDesktop ? 250 : 220,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+
       final occupied = controller.occupiedTableOrders;
       if (occupied.isEmpty) return const SizedBox.shrink();
 
@@ -1356,6 +1463,47 @@ class _HomeScreenState extends State<HomeScreen> {
                     Modular.to.pushNamed(HomeMainRoutes.businessOverview),
                 borderRadius: BorderRadius.circular(_cardRadius),
                 child: Obx(() {
+                  if (controller.isHomeLoading.value) {
+                    return _homeShimmer(
+                      child: Column(
+                        children: [
+                          Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              for (var i = 0; i < 2; i++) ...[
+                                if (i > 0) const SizedBox(width: 12),
+                                Expanded(
+                                  child: Container(
+                                    height: 88,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
                   return Column(
                     children: [
                       Row(
@@ -1722,6 +1870,18 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _GlassContainer(
             padding: const EdgeInsets.all(20),
             child: Obx(() {
+              if (controller.isHomeLoading.value) {
+                return _homeShimmer(
+                  child: Container(
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              }
+
               final data = controller.chartSalesData;
               final period = controller.selectedChartPeriod.value;
               final dataKey =
@@ -2398,6 +2558,25 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _GlassContainer(
             padding: const EdgeInsets.all(16),
             child: Obx(() {
+              if (controller.isHomeLoading.value) {
+                return _homeShimmer(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < 3; i++) ...[
+                        if (i > 0) const SizedBox(height: 10),
+                        Container(
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }
+
               final topItems = controller.topSellingItems.take(5).toList();
               if (topItems.isEmpty) {
                 return Container(
@@ -2928,6 +3107,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _homeShimmer({required Widget child}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: child,
     );
   }
 }

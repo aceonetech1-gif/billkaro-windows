@@ -29,9 +29,9 @@ String resolvedMediaUrl(String? stored) {
   }
 
   try {
-    final origin = Uri.parse(baseURL)
-        .replace(path: '', query: '', fragment: '')
-        .toString();
+    final origin = Uri.parse(
+      baseURL,
+    ).replace(path: '', query: '', fragment: '').toString();
     final joined = s.startsWith('/') ? '$origin$s' : '$origin/$s';
     return _normalizeAbsoluteMediaUrl(joined);
   } catch (_) {
@@ -56,6 +56,7 @@ String _normalizeAbsoluteMediaUrl(String url) {
 
 const String register = 'auth/register';
 const String login = 'auth/login';
+const String refreshTokenPath = 'auth/refresh';
 const String sendPhoneOtpPath = 'auth/phone/send-otp';
 const String verifyPhoneOtpPath = 'auth/phone/verify-otp';
 const String sendStaffPhoneOtpPath = 'auth/staff/phone/send-otp';
@@ -94,5 +95,6 @@ const String supplierCheckEmail = 'suppliers/check-email';
 const String supplierCheckPhone = 'suppliers/check-phone';
 const String daySessions = 'day-sessions';
 const String expenses = 'expenses';
+const String analytics = 'analytics';
 const String walletCards = 'wallet-cards';
 const String walletRedeemCoupon = 'wallet/redeem-coupon';

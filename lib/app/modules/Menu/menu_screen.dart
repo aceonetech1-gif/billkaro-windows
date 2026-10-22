@@ -93,7 +93,7 @@ class MenuScreen extends StatelessWidget {
                                             .appPref
                                             .selectedOutlet!
                                             .logo!),
-                                        fit: BoxFit.cover,
+                                        fit: BoxFit.contain,
                                       ),
                                     )
                                   : Center(

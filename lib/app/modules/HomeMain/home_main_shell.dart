@@ -62,13 +62,16 @@ class _HomeMainShellState extends State<HomeMainShell> {
       builder: (_) {
         return modular.NavigationListener(
           builder: (context, _) {
-            final selectedIndex = HomeMainRoutes.selectedIndexForPath(
-              modular.Modular.to.path,
+            final path = modular.Modular.to.path;
+            final selectedIndex = HomeMainRoutes.selectedIndexForPath(path);
+            final showSidebar = !HomeMainRoutes.hidesShellSidebar(
+              path,
+              modular.Modular.args.data,
             );
 
             if (showcaseController.shouldShowShowcase() &&
                 !showcaseController.shellShowcaseArmConsumed &&
-                modular.Modular.to.path == HomeMainRoutes.home) {
+                path == HomeMainRoutes.home) {
               _maybeStartShowcase();
             }
 
@@ -80,23 +83,25 @@ class _HomeMainShellState extends State<HomeMainShell> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        AppShellSidebar(
-                          selectedIndex: selectedIndex,
-                          collapsed: _sidebarCollapsed,
-                          onToggleCollapsed: () {
-                            setState(
-                              () => _sidebarCollapsed = !_sidebarCollapsed,
-                            );
-                          },
-                        ),
-                        const SizedBox(
-                          height: double.infinity,
-                          child: VerticalDivider(
-                            width: 1,
-                            thickness: 1,
-                            color: Color(0xFF3D4558),
+                        if (showSidebar) ...[
+                          AppShellSidebar(
+                            selectedIndex: selectedIndex,
+                            collapsed: _sidebarCollapsed,
+                            onToggleCollapsed: () {
+                              setState(
+                                () => _sidebarCollapsed = !_sidebarCollapsed,
+                              );
+                            },
                           ),
-                        ),
+                          const SizedBox(
+                            height: double.infinity,
+                            child: VerticalDivider(
+                              width: 1,
+                              thickness: 1,
+                              color: Color(0xFF3D4558),
+                            ),
+                          ),
+                        ],
                         const Expanded(child: modular.RouterOutlet()),
                       ],
                     ),

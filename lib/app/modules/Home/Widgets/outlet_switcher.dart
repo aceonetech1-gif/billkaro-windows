@@ -399,7 +399,7 @@ class _OutletLogoAvatar extends StatelessWidget {
                 imageUrl: resolvedMediaUrl(logoUrl!.trim()),
                 width: size,
                 height: size,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 placeholder: (_, __) => _fallback(),
                 errorWidget: (_, __, ___) => _fallback(),
               )
