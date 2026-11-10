@@ -419,12 +419,55 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           value: controller.showLogoOnBill,
           onChanged: controller.setShowLogoOnBill,
         ),
+        _buildLogoSizeTile(loc),
+        _buildSwitchTile(
+          icon: Icons.branding_watermark_outlined,
+          title: loc.show_brand_name_on_bill,
+          subtitle: loc.show_brand_name_on_bill_subtitle,
+          value: controller.showBrandNameOnBill,
+          onChanged: controller.setShowBrandNameOnBill,
+        ),
         _buildSwitchTile(
           icon: Icons.storefront_outlined,
           title: loc.show_outlet_name_on_bill,
           subtitle: loc.show_outlet_name_on_bill_subtitle,
           value: controller.showOutletNameOnBill,
           onChanged: controller.setShowOutletNameOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.location_on_outlined,
+          title: loc.show_address_on_bill,
+          subtitle: loc.show_address_on_bill_subtitle,
+          value: controller.showAddressOnBill,
+          onChanged: controller.setShowAddressOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.receipt_long_outlined,
+          title: loc.show_gstin_on_bill,
+          subtitle: loc.show_gstin_on_bill_subtitle,
+          value: controller.showGstinOnBill,
+          onChanged: controller.setShowGstinOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.verified_outlined,
+          title: loc.show_fssai_on_bill,
+          subtitle: loc.show_fssai_on_bill_subtitle,
+          value: controller.showFssaiOnBill,
+          onChanged: controller.setShowFssaiOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.phone_outlined,
+          title: loc.show_phone_on_bill,
+          subtitle: loc.show_phone_on_bill_subtitle,
+          value: controller.showPhoneOnBill,
+          onChanged: controller.setShowPhoneOnBill,
+        ),
+        _buildSwitchTile(
+          icon: Icons.confirmation_number_outlined,
+          title: loc.show_invoice_no_on_bill,
+          subtitle: loc.show_invoice_no_on_bill_subtitle,
+          value: controller.showInvoiceNoOnBill,
+          onChanged: controller.setShowInvoiceNoOnBill,
         ),
         _buildSwitchTile(
           icon: Icons.vertical_align_top_outlined,
@@ -950,6 +993,47 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Slider (30%–100%) for the logo size on preview and printed bills.
+  /// Disabled while "Show logo on bill" is off.
+  Widget _buildLogoSizeTile(AppLocalizations loc) {
+    return _buildTile(
+      icon: Icons.photo_size_select_large_outlined,
+      title: loc.bill_logo_size,
+      subtitle: loc.bill_logo_size_subtitle,
+      trailing: Obx(() {
+        final enabled = controller.showLogoOnBill.value;
+        final scale = controller.billLogoScale.value;
+        return SizedBox(
+          width: 240,
+          child: Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: scale,
+                  min: AppPref.minBillLogoScale,
+                  max: AppPref.maxBillLogoScale,
+                  divisions: 14,
+                  label: '${(scale * 100).round()}%',
+                  activeColor: AppColor.primary,
+                  onChanged: enabled ? controller.setBillLogoScale : null,
+                  onChangeEnd: enabled ? controller.saveBillLogoScale : null,
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  '${(scale * 100).round()}%',
+                  textAlign: TextAlign.right,
+                  style: _subtitleStyle,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 

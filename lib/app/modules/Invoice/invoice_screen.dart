@@ -33,17 +33,18 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
 
   /// Outlet logo at the top of the bill; hidden when missing/unreachable.
   Widget _buildLogo() {
-    if (!controller.appPref.showLogoOnBill) return const SizedBox.shrink();
+    if (!controller.showLogo.value) return const SizedBox.shrink();
     final url = resolvedMediaUrl(controller.appPref.selectedOutlet?.logo);
     if (url.isEmpty) return const SizedBox.shrink();
+    final scale = controller.logoScale.value;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: CachedNetworkImage(
         imageUrl: url,
-        height: 120,
-        width: 240,
+        height: 120 * scale,
+        width: 240 * scale,
         fit: BoxFit.contain,
-        placeholder: (_, __) => const SizedBox(height: 120),
+        placeholder: (_, __) => SizedBox(height: 120 * scale),
         errorWidget: (_, __, ___) => const SizedBox.shrink(),
       ),
     );
@@ -86,15 +87,20 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final maxWidth = constraints.maxWidth > 1100
-                ? 1100.0
-                : (constraints.maxWidth > 720 ? 900.0 : constraints.maxWidth);
+            // Receipt-like width: keep the bill narrow and centred instead of
+            // stretching across wide desktop windows.
+            const invoiceWidth = 480.0;
+            final maxWidth = constraints.maxWidth > invoiceWidth
+                ? invoiceWidth
+                : constraints.maxWidth;
 
             return Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Obx(
                   () => Card(
+                    // Breathing room between the bill and the action bar.
+                    margin: const EdgeInsets.fromLTRB(4, 16, 4, 24),
                     elevation: 0,
                     color: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -120,22 +126,29 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               ),
                               const Gap(6),
                             ],
-                            Text('${controller.appPref.user!.brandName},'),
-                            Text(controller.businessName.value),
-                            Text(
+                            if (controller.showBrandName.value)
+                              Text('${controller.appPref.user!.brandName},'),
+                            if (controller.showOutletName.value &&
+                                controller.businessName.value.isNotEmpty)
+                              Text(controller.businessName.value),
+                            if (controller.showAddress.value)
+                              Text(
                               controller.appPref.user!.address!,
                               textAlign: TextAlign.center,
                             ),
 
-                            Text(
+                            if (controller.showGstin.value)
+                              Text(
                               'GSTIN No: ${controller.appPref.selectedOutlet!.gstinNumber ?? 'N/A'}',
                               style: const TextStyle(fontSize: 14),
                             ),
-                            Text(
+                            if (controller.showFssai.value)
+                              Text(
                               'FSSAI No: ${controller.appPref.selectedOutlet!.fssaiNumber ?? 'N/A'}',
                               style: const TextStyle(fontSize: 14),
                             ),
-                            Text(
+                            if (controller.showPhone.value)
+                              Text(
                               'Phone No: ${controller.appPref.selectedOutlet!.phoneNumber ?? 'N/A'}',
                               style: const TextStyle(fontSize: 14),
                             ),
@@ -201,9 +214,20 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                   children: [
                                     Text('Date: ${controller.date.value}'),
                                     Text('Time: ${controller.time.value}'),
-                                    Text(
+                                    if (controller.showInvoiceNo.value)
+                                      Text(
                                       'Invoice no: ${controller.invoiceNo.value}',
                                     ),
+                                    if (controller
+                                        .tableNumber
+                                        .value
+                                        .isNotEmpty)
+                                      Text(
+                                        'Table no: ${controller.tableNumber.value}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ],
@@ -458,8 +482,11 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             const Gap(10),
                             const DottedLine(),
                             const Gap(10),
-                            // Footer message replaces the default terms.
-                            if (controller.footerMessage.value.isNotEmpty)
+                            // Footer message replaces the default terms;
+                            // nothing when the footer is disabled.
+                            if (!controller.showFooter.value)
+                              const SizedBox.shrink()
+                            else if (controller.footerMessage.value.isNotEmpty)
                               Text(
                                 controller.footerMessage.value,
                                 textAlign: TextAlign.center,
@@ -477,7 +504,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                             ],
 
                             // ✅ QR Code for Payment
-                            if (controller.appPref.showQrOnBill &&
+                            if (controller.showQr.value &&
                                 controller.upiId.value.isNotEmpty) ...[
                               const Text(
                                 'Scan to Pay',

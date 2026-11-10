@@ -2107,7 +2107,54 @@ class AppLocalizationsHi extends AppLocalizations {
       'इनवॉइस और प्रिंट पर बिज़नेस लोगो दिखाएं';
 
   @override
+  String get bill_logo_size => 'लोगो का आकार';
+
+  @override
+  String get bill_logo_size_subtitle =>
+      'इनवॉइस और प्रिंट पर बिज़नेस लोगो का आकार बदलें';
+
+  @override
   String get show_outlet_name_on_bill => 'बिल पर आउटलेट का नाम दिखाएं';
+
+  @override
+  String get show_brand_name_on_bill => 'बिल पर ब्रांड का नाम दिखाएं';
+
+  @override
+  String get show_brand_name_on_bill_subtitle =>
+      'बिल के ऊपर ब्रांड का नाम प्रिंट करें';
+
+  @override
+  String get show_address_on_bill => 'बिल पर पता दिखाएं';
+
+  @override
+  String get show_address_on_bill_subtitle =>
+      'बिल पर बिज़नेस का पता प्रिंट करें';
+
+  @override
+  String get show_gstin_on_bill => 'बिल पर GSTIN दिखाएं';
+
+  @override
+  String get show_gstin_on_bill_subtitle => 'बिल पर GSTIN नंबर प्रिंट करें';
+
+  @override
+  String get show_fssai_on_bill => 'बिल पर FSSAI दिखाएं';
+
+  @override
+  String get show_fssai_on_bill_subtitle => 'बिल पर FSSAI नंबर प्रिंट करें';
+
+  @override
+  String get show_phone_on_bill => 'बिल पर फ़ोन नंबर दिखाएं';
+
+  @override
+  String get show_phone_on_bill_subtitle =>
+      'बिल पर आउटलेट का फ़ोन नंबर प्रिंट करें';
+
+  @override
+  String get show_invoice_no_on_bill => 'बिल पर इनवॉइस नंबर दिखाएं';
+
+  @override
+  String get show_invoice_no_on_bill_subtitle =>
+      'बिल पर इनवॉइस नंबर प्रिंट करें';
 
   @override
   String get show_outlet_name_on_bill_subtitle =>

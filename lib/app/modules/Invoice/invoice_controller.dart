@@ -26,6 +26,7 @@ class InvoicePreviewController extends BaseController {
   var customerName = ''.obs;
   var customerPhone = ''.obs;
   var paymentMode = ''.obs;
+  var tableNumber = ''.obs;
   pw.Document pdf = pw.Document();
 
   RxList<OrderItem> itemList = <OrderItem>[].obs;
@@ -37,6 +38,19 @@ class InvoicePreviewController extends BaseController {
   final businessName = ''.obs;
   final headerMessage = ''.obs;
   final footerMessage = ''.obs;
+
+  /// Bill settings from App Settings; refreshed via [getUserDetails].
+  final showBrandName = true.obs;
+  final showAddress = true.obs;
+  final showGstin = true.obs;
+  final showFssai = true.obs;
+  final showPhone = true.obs;
+  final showInvoiceNo = true.obs;
+  final showOutletName = true.obs;
+  final showFooter = true.obs;
+  final showLogo = true.obs;
+  final showQr = true.obs;
+  final logoScale = 1.0.obs;
   pw.ImageProvider? qrCodeImageProvider;
 
   double get subtotal => itemList.fold(0.0, (sum, item) {
@@ -88,28 +102,34 @@ class InvoicePreviewController extends BaseController {
             ],
 
             // --- Business Header ---
-            pw.Text(
-              '${user.brandName},',
-              style: const pw.TextStyle(fontSize: 14),
-            ),
-            pw.Text(
-              businessName.value,
-              style: const pw.TextStyle(fontSize: 14),
-            ),
-            pw.Text(
+            if (showBrandName.value)
+              pw.Text(
+                '${user.brandName},',
+                style: const pw.TextStyle(fontSize: 14),
+              ),
+            if (showOutletName.value && businessName.value.isNotEmpty)
+              pw.Text(
+                businessName.value,
+                style: const pw.TextStyle(fontSize: 14),
+              ),
+            if (showAddress.value)
+              pw.Text(
               user.address ?? '',
               textAlign: pw.TextAlign.center,
               style: const pw.TextStyle(fontSize: 12),
             ),
-            pw.Text(
+            if (showGstin.value)
+              pw.Text(
               'GSTIN No: ${outlet.gstinNumber ?? 'N/A'}',
               style: const pw.TextStyle(fontSize: 12),
             ),
-            pw.Text(
+            if (showFssai.value)
+              pw.Text(
               'FSSAI No: ${outlet.fssaiNumber ?? 'N/A'}',
               style: const pw.TextStyle(fontSize: 12),
             ),
-            pw.Text(
+            if (showPhone.value)
+              pw.Text(
               'Phone No: ${outlet.phoneNumber ?? 'N/A'}',
               style: const pw.TextStyle(fontSize: 12),
             ),
@@ -166,7 +186,13 @@ class InvoicePreviewController extends BaseController {
                   children: [
                     pw.Text('Date: ${date.value}', style: const pw.TextStyle(fontSize: 12)),
                     pw.Text('Time: ${time.value}', style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text('Invoice no: ${invoiceNo.value}', style: const pw.TextStyle(fontSize: 12)),
+                    if (showInvoiceNo.value)
+                      pw.Text('Invoice no: ${invoiceNo.value}', style: const pw.TextStyle(fontSize: 12)),
+                    if (tableNumber.value.isNotEmpty)
+                      pw.Text(
+                        'Table no: ${tableNumber.value}',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+                      ),
                   ],
                 ),
               ],
@@ -268,8 +294,11 @@ class InvoicePreviewController extends BaseController {
             _buildDottedLine(),
             pw.SizedBox(height: 10),
 
-            // --- Footer message, or the default terms when there is none ---
-            if (footerMessage.value.isNotEmpty)
+            // --- Footer message, or the default terms when there is none;
+            // nothing at all when the footer is disabled. ---
+            if (!showFooter.value)
+              pw.SizedBox()
+            else if (footerMessage.value.isNotEmpty)
               pw.Center(
                 child: pw.Text(
                   footerMessage.value,
@@ -287,7 +316,7 @@ class InvoicePreviewController extends BaseController {
               ),
 
             // --- QR Code ---
-            if (appPref.showQrOnBill && upiId.value.isNotEmpty && qrCodeImageProvider != null) ...[
+            if (showQr.value && upiId.value.isNotEmpty && qrCodeImageProvider != null) ...[
               pw.SizedBox(height: 10),
               pw.Center(
                 child: pw.Column(children: [
@@ -378,6 +407,17 @@ class InvoicePreviewController extends BaseController {
         appPref.showBillHeader ? appPref.billHeaderMessage : '';
     footerMessage.value =
         appPref.showBillFooter ? appPref.billFooterMessage : '';
+    showBrandName.value = appPref.showBrandNameOnBill;
+    showAddress.value = appPref.showAddressOnBill;
+    showGstin.value = appPref.showGstinOnBill;
+    showFssai.value = appPref.showFssaiOnBill;
+    showPhone.value = appPref.showPhoneOnBill;
+    showInvoiceNo.value = appPref.showInvoiceNoOnBill;
+    showOutletName.value = appPref.showOutletNameOnBill;
+    showFooter.value = appPref.showBillFooter;
+    showLogo.value = appPref.showLogoOnBill;
+    showQr.value = appPref.showQrOnBill;
+    logoScale.value = appPref.billLogoScale;
   }
 
   void getItemList() {
@@ -395,6 +435,7 @@ class InvoicePreviewController extends BaseController {
       customerName.value = '';
       customerPhone.value = '';
       paymentMode.value = '';
+      tableNumber.value = '';
       _generateQRCode();
       return;
     }
@@ -407,6 +448,7 @@ class InvoicePreviewController extends BaseController {
     customerName.value = invoice.customerName ?? '';
     customerPhone.value = invoice.phoneNumber ?? '';
     paymentMode.value = invoice.paymentReceivedIn ?? '';
+    tableNumber.value = (invoice.tableNumber ?? '').trim();
     _generateQRCode();
   }
 
@@ -484,6 +526,7 @@ class InvoicePreviewController extends BaseController {
         fssaiNumber: appPref.selectedOutlet!.fssaiNumber ?? '',
         gstinNumber: appPref.selectedOutlet!.gstinNumber ?? '',
         invoiceNo: invoiceNo.value,
+        tableNumber: tableNumber.value,
         items: itemList,
         subtotal: subtotal,
         totalTax: totalTax,
@@ -529,6 +572,7 @@ class InvoicePreviewController extends BaseController {
         fssaiNumber: appPref.selectedOutlet!.fssaiNumber ?? '',
         gstinNumber: appPref.selectedOutlet!.gstinNumber ?? '',
         invoiceNo: invoiceNo.value,
+        tableNumber: tableNumber.value,
         items: itemList,
         subtotal: subtotal,
         totalTax: totalTax,

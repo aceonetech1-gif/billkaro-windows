@@ -3953,11 +3953,95 @@ abstract class AppLocalizations {
   /// **'Show business logo on invoice and print'**
   String get show_logo_on_bill_subtitle;
 
+  /// No description provided for @bill_logo_size.
+  ///
+  /// In en, this message translates to:
+  /// **'Logo size'**
+  String get bill_logo_size;
+
+  /// No description provided for @bill_logo_size_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize the business logo on invoice and print'**
+  String get bill_logo_size_subtitle;
+
   /// No description provided for @show_outlet_name_on_bill.
   ///
   /// In en, this message translates to:
   /// **'Show outlet name on bill'**
   String get show_outlet_name_on_bill;
+
+  /// No description provided for @show_brand_name_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show brand name on bill'**
+  String get show_brand_name_on_bill;
+
+  /// No description provided for @show_brand_name_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the brand name at the top of the bill'**
+  String get show_brand_name_on_bill_subtitle;
+
+  /// No description provided for @show_address_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show address on bill'**
+  String get show_address_on_bill;
+
+  /// No description provided for @show_address_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the business address on the bill'**
+  String get show_address_on_bill_subtitle;
+
+  /// No description provided for @show_gstin_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show GSTIN on bill'**
+  String get show_gstin_on_bill;
+
+  /// No description provided for @show_gstin_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the GSTIN number on the bill'**
+  String get show_gstin_on_bill_subtitle;
+
+  /// No description provided for @show_fssai_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show FSSAI on bill'**
+  String get show_fssai_on_bill;
+
+  /// No description provided for @show_fssai_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the FSSAI number on the bill'**
+  String get show_fssai_on_bill_subtitle;
+
+  /// No description provided for @show_phone_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show phone number on bill'**
+  String get show_phone_on_bill;
+
+  /// No description provided for @show_phone_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the outlet phone number on the bill'**
+  String get show_phone_on_bill_subtitle;
+
+  /// No description provided for @show_invoice_no_on_bill.
+  ///
+  /// In en, this message translates to:
+  /// **'Show invoice number on bill'**
+  String get show_invoice_no_on_bill;
+
+  /// No description provided for @show_invoice_no_on_bill_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Print the invoice number on the bill'**
+  String get show_invoice_no_on_bill_subtitle;
 
   /// No description provided for @show_outlet_name_on_bill_subtitle.
   ///

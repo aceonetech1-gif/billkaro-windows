@@ -695,12 +695,11 @@ packages:
     source: hosted
     version: "8.2.1"
   flutter_blue_plus_winrt:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: flutter_blue_plus_winrt
-      sha256: ed894f0ab341f4cece8fa33edc381d46424a7c5bfd0e841d933d0f8c34c86521
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/flutter_blue_plus_winrt"
+      relative: true
+    source: path
     version: "0.0.18"
   flutter_bluetooth_classic_serial:
     dependency: "direct main"

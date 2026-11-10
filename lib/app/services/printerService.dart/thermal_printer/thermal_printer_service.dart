@@ -1459,9 +1459,24 @@ class ThermalPrinterService extends GetxController {
     bool isBluetooth = false,
     String? upiId,
 
+    /// Dine-in table; printed under the invoice number when non-empty.
+    String tableNumber = '',
+
     /// Logo path/URL; defaults to the selected outlet's logo.
     String? logoUrl,
   }) async {
+    // Hide header lines turned off in App Settings.
+    final billPref = Get.find<AppPref>();
+    if (!billPref.showAddressOnBill) {
+      address = '';
+      city = '';
+      zipcode = '';
+      state = '';
+    }
+    if (!billPref.showGstinOnBill) gstinNumber = '';
+    if (!billPref.showFssaiOnBill) fssaiNumber = '';
+    if (!billPref.showPhoneOnBill) phoneNumber = '';
+    final showInvoiceNo = billPref.showInvoiceNoOnBill;
     final ok = await ensureConnectedForRole(PrintRole.bill);
     if (!ok) throw Exception('No bill printer connected');
 
@@ -1470,6 +1485,8 @@ class ThermalPrinterService extends GetxController {
     final storedLogo = pref.showLogoOnBill
         ? logoUrl ?? pref.selectedOutlet?.logo
         : null;
+    final logoScale = pref.billLogoScale;
+    final table = tableNumber.trim();
     final showOutletName = pref.showOutletNameOnBill;
     final headerMessage = pref.showBillHeader ? pref.billHeaderMessage : '';
     final footerMessage = pref.showBillFooter ? pref.billFooterMessage : '';
@@ -1482,11 +1499,15 @@ class ThermalPrinterService extends GetxController {
     if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
       await _printInvoiceWindowsPdf(
         logoUrl: storedLogo,
+        logoScale: logoScale,
+        tableNumber: table,
         showOutletName: showOutletName,
         taxRows: taxRows,
         headerMessage: headerMessage,
         footerMessage: footerMessage,
-        brandName: brandName,
+        showFooter: pref.showBillFooter,
+        showInvoiceNo: showInvoiceNo,
+        brandName: pref.showBrandNameOnBill ? brandName : '',
         businessName: businessName,
         address: address,
         city: city,
@@ -1521,11 +1542,13 @@ class ThermalPrinterService extends GetxController {
     final logo = await LogoGenerator.generateRaster(
       storedLogo,
       paperSize: selectedPaperSize.value,
+      scale: logoScale,
     );
     if (logo.isNotEmpty) builder.bytes.addAll(logo);
 
     // Header — empty lines are skipped so no blank rows are printed.
-    final brand = brandName.trim();
+    // Brand name can be hidden from App Settings.
+    final brand = Get.find<AppPref>().showBrandNameOnBill ? brandName.trim() : '';
     final outletName = businessName.trim();
     final addressLine = address.trim();
     builder.center();
@@ -1567,11 +1590,16 @@ class ThermalPrinterService extends GetxController {
     builder
       ..bold(
         '${TextHelper.formatRow('Payment In: $paymentMode', 'Time: $time', w)}\n',
-      )
-      ..text(
+      );
+    if (showInvoiceNo) {
+      builder.text(
         '${TextHelper.formatRow('', 'Invoice No: $invoiceNo', w)}\n',
-      )
-      ..line();
+      );
+    }
+    if (table.isNotEmpty) {
+      builder.bold('${TextHelper.formatRow('', 'Table No: $table', w)}\n');
+    }
+    builder.line();
 
     final itemHeader = TextHelper.invoiceTableRow(
       item: 'Item',
@@ -1646,8 +1674,10 @@ class ThermalPrinterService extends GetxController {
       )
       ..center();
 
-    // Footer message replaces the default terms.
-    if (footerMessage.isNotEmpty) {
+    // Footer message replaces the default terms; footer off prints nothing.
+    if (!pref.showBillFooter) {
+      // Footer disabled in settings.
+    } else if (footerMessage.isNotEmpty) {
       builder.text('$footerMessage\n');
     } else {
       builder
@@ -1893,9 +1923,13 @@ class ThermalPrinterService extends GetxController {
     required double totalAmount,
     String? upiId,
     String? logoUrl,
+    double logoScale = 1.0,
+    String tableNumber = '',
     bool showOutletName = true,
     String headerMessage = '',
     String footerMessage = '',
+    bool showFooter = true,
+    bool showInvoiceNo = true,
   }) async {
     final doc = pw.Document();
     final paper = selectedPaperSize.value;
@@ -1909,8 +1943,8 @@ class ThermalPrinterService extends GetxController {
         pw.Center(
           child: pw.Image(
             logoImage,
-            width: paper.pdfPageWidthMm * 0.95 * PdfPageFormat.mm,
-            height: 48 * PdfPageFormat.mm,
+            width: paper.pdfPageWidthMm * 0.95 * logoScale * PdfPageFormat.mm,
+            height: 48 * logoScale * PdfPageFormat.mm,
             fit: pw.BoxFit.contain,
           ),
         ),
@@ -1933,16 +1967,18 @@ class ThermalPrinterService extends GetxController {
           ),
         ),
     ];
-    // Footer message replaces the default thank-you line.
-    final closingLine = pw.Center(
-      child: pw.Text(
-        footerMessage.isNotEmpty
-            ? footerMessage
-            : 'Thank you for doing business with us.',
-        style: t(),
-        textAlign: pw.TextAlign.center,
-      ),
-    );
+    // Footer message replaces the default thank-you line; footer off = none.
+    final pw.Widget closingLine = !showFooter
+        ? pw.SizedBox()
+        : pw.Center(
+            child: pw.Text(
+              footerMessage.isNotEmpty
+                  ? footerMessage
+                  : 'Thank you for doing business with us.',
+              style: t(),
+              textAlign: pw.TextAlign.center,
+            ),
+          );
 
     doc.addPage(
       pw.Page(
@@ -1984,10 +2020,12 @@ class ThermalPrinterService extends GetxController {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('Invoice: $invoiceNo', style: t()),
+              pw.Text(showInvoiceNo ? 'Invoice: $invoiceNo' : '', style: t()),
               pw.Text('Time: $time', style: t()),
             ],
           ),
+          if (tableNumber.isNotEmpty)
+            pw.Text('Table No: $tableNumber', style: t(b: true)),
           pw.SizedBox(height: 6),
           pw.Table(
             // Give right-side numbers more space to avoid clipping.
@@ -2171,10 +2209,12 @@ class ThermalPrinterService extends GetxController {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Invoice: $invoiceNo', style: t()),
+                  pw.Text(showInvoiceNo ? 'Invoice: $invoiceNo' : '', style: t()),
                   pw.Text('Time: $time', style: t()),
                 ],
               ),
+              if (tableNumber.isNotEmpty)
+                pw.Text('Table No: $tableNumber', style: t(b: true)),
               pw.SizedBox(height: 6),
               pw.Table(
                 columnWidths: const {

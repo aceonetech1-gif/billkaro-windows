@@ -1,3 +1,4 @@
+import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
@@ -22,6 +23,13 @@ class AppSettingsController extends BaseController {
   late final RxBool notificationsEnabled;
   late final RxBool showQrOnBill;
   late final RxBool showLogoOnBill;
+  late final RxDouble billLogoScale;
+  late final RxBool showBrandNameOnBill;
+  late final RxBool showAddressOnBill;
+  late final RxBool showGstinOnBill;
+  late final RxBool showFssaiOnBill;
+  late final RxBool showPhoneOnBill;
+  late final RxBool showInvoiceNoOnBill;
   late final RxBool showOutletNameOnBill;
   late final RxBool showBillHeader;
   late final RxBool showBillFooter;
@@ -63,6 +71,13 @@ class AppSettingsController extends BaseController {
     notificationsEnabled = appPref.notificationsEnabled.obs;
     showQrOnBill = appPref.showQrOnBill.obs;
     showLogoOnBill = appPref.showLogoOnBill.obs;
+    billLogoScale = appPref.billLogoScale.obs;
+    showBrandNameOnBill = appPref.showBrandNameOnBill.obs;
+    showAddressOnBill = appPref.showAddressOnBill.obs;
+    showGstinOnBill = appPref.showGstinOnBill.obs;
+    showFssaiOnBill = appPref.showFssaiOnBill.obs;
+    showPhoneOnBill = appPref.showPhoneOnBill.obs;
+    showInvoiceNoOnBill = appPref.showInvoiceNoOnBill.obs;
     showOutletNameOnBill = appPref.showOutletNameOnBill.obs;
     showBillHeader = appPref.showBillHeader.obs;
     showBillFooter = appPref.showBillFooter.obs;
@@ -152,29 +167,86 @@ class AppSettingsController extends BaseController {
     notificationsEnabled.value = value;
   }
 
+  /// Re-reads bill settings into an open invoice preview, if any.
+  void _refreshInvoicePreview() {
+    if (Get.isRegistered<InvoicePreviewController>()) {
+      Get.find<InvoicePreviewController>().getUserDetails();
+    }
+  }
+
   void setShowQrOnBill(bool value) {
     appPref.showQrOnBill = value;
     showQrOnBill.value = value;
+    _refreshInvoicePreview();
   }
 
   void setShowLogoOnBill(bool value) {
     appPref.showLogoOnBill = value;
     showLogoOnBill.value = value;
+    _refreshInvoicePreview();
+  }
+
+  /// Live slider value; persisted on [saveBillLogoScale].
+  void setBillLogoScale(double value) => billLogoScale.value = value;
+
+  void saveBillLogoScale(double value) {
+    appPref.billLogoScale = value;
+    billLogoScale.value = appPref.billLogoScale;
+    _refreshInvoicePreview();
+  }
+
+  void setShowAddressOnBill(bool value) {
+    appPref.showAddressOnBill = value;
+    showAddressOnBill.value = value;
+    _refreshInvoicePreview();
+  }
+
+  void setShowGstinOnBill(bool value) {
+    appPref.showGstinOnBill = value;
+    showGstinOnBill.value = value;
+    _refreshInvoicePreview();
+  }
+
+  void setShowFssaiOnBill(bool value) {
+    appPref.showFssaiOnBill = value;
+    showFssaiOnBill.value = value;
+    _refreshInvoicePreview();
+  }
+
+  void setShowPhoneOnBill(bool value) {
+    appPref.showPhoneOnBill = value;
+    showPhoneOnBill.value = value;
+    _refreshInvoicePreview();
+  }
+
+  void setShowInvoiceNoOnBill(bool value) {
+    appPref.showInvoiceNoOnBill = value;
+    showInvoiceNoOnBill.value = value;
+    _refreshInvoicePreview();
+  }
+
+  void setShowBrandNameOnBill(bool value) {
+    appPref.showBrandNameOnBill = value;
+    showBrandNameOnBill.value = value;
+    _refreshInvoicePreview();
   }
 
   void setShowOutletNameOnBill(bool value) {
     appPref.showOutletNameOnBill = value;
     showOutletNameOnBill.value = value;
+    _refreshInvoicePreview();
   }
 
   void setShowBillHeader(bool value) {
     appPref.showBillHeader = value;
     showBillHeader.value = value;
+    _refreshInvoicePreview();
   }
 
   void setShowBillFooter(bool value) {
     appPref.showBillFooter = value;
     showBillFooter.value = value;
+    _refreshInvoicePreview();
   }
 
   void setShowGstSplitOnBill(bool value) {

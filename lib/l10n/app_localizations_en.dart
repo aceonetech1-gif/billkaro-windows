@@ -2101,7 +2101,56 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show business logo on invoice and print';
 
   @override
+  String get bill_logo_size => 'Logo size';
+
+  @override
+  String get bill_logo_size_subtitle =>
+      'Resize the business logo on invoice and print';
+
+  @override
   String get show_outlet_name_on_bill => 'Show outlet name on bill';
+
+  @override
+  String get show_brand_name_on_bill => 'Show brand name on bill';
+
+  @override
+  String get show_brand_name_on_bill_subtitle =>
+      'Print the brand name at the top of the bill';
+
+  @override
+  String get show_address_on_bill => 'Show address on bill';
+
+  @override
+  String get show_address_on_bill_subtitle =>
+      'Print the business address on the bill';
+
+  @override
+  String get show_gstin_on_bill => 'Show GSTIN on bill';
+
+  @override
+  String get show_gstin_on_bill_subtitle =>
+      'Print the GSTIN number on the bill';
+
+  @override
+  String get show_fssai_on_bill => 'Show FSSAI on bill';
+
+  @override
+  String get show_fssai_on_bill_subtitle =>
+      'Print the FSSAI number on the bill';
+
+  @override
+  String get show_phone_on_bill => 'Show phone number on bill';
+
+  @override
+  String get show_phone_on_bill_subtitle =>
+      'Print the outlet phone number on the bill';
+
+  @override
+  String get show_invoice_no_on_bill => 'Show invoice number on bill';
+
+  @override
+  String get show_invoice_no_on_bill_subtitle =>
+      'Print the invoice number on the bill';
 
   @override
   String get show_outlet_name_on_bill_subtitle =>

@@ -28,6 +28,12 @@ class AppPref {
   static const String keyShowQrOnBill = 'show_qr_on_bill';
   static const String keyShowLogoOnBill = 'show_logo_on_bill';
   static const String keyShowOutletNameOnBill = 'show_outlet_name_on_bill';
+  static const String keyShowBrandNameOnBill = 'show_brand_name_on_bill';
+  static const String keyShowAddressOnBill = 'show_address_on_bill';
+  static const String keyShowGstinOnBill = 'show_gstin_on_bill';
+  static const String keyShowFssaiOnBill = 'show_fssai_on_bill';
+  static const String keyShowPhoneOnBill = 'show_phone_on_bill';
+  static const String keyShowInvoiceNoOnBill = 'show_invoice_no_on_bill';
   static const String keyShowBillHeader = 'show_bill_header';
   static const String keyShowBillFooter = 'show_bill_footer';
   static const String keyShowGstSplitOnBill = 'show_gst_split_on_bill';
@@ -222,11 +228,55 @@ class AppPref {
   set showLogoOnBill(bool value) =>
       _preferences.setBool(keyShowLogoOnBill, value);
 
+  /// 👉 Logo size on bills, as a fraction of the max logo box (0.3–1.0).
+  static const String keyBillLogoScale = 'bill_logo_scale';
+  static const double minBillLogoScale = 0.3;
+  static const double maxBillLogoScale = 1.0;
+  double get billLogoScale =>
+      (_preferences.getDouble(keyBillLogoScale) ?? maxBillLogoScale)
+          .clamp(minBillLogoScale, maxBillLogoScale)
+          .toDouble();
+  set billLogoScale(double value) => _preferences.setDouble(
+    keyBillLogoScale,
+    value.clamp(minBillLogoScale, maxBillLogoScale).toDouble(),
+  );
+
   /// 👉 Show selected outlet's name under the brand name on printed bills
   bool get showOutletNameOnBill =>
       _preferences.getBool(keyShowOutletNameOnBill) ?? true;
   set showOutletNameOnBill(bool value) =>
       _preferences.setBool(keyShowOutletNameOnBill, value);
+
+  /// 👉 Show the brand name at the top of printed bills
+  bool get showBrandNameOnBill =>
+      _preferences.getBool(keyShowBrandNameOnBill) ?? true;
+  set showBrandNameOnBill(bool value) =>
+      _preferences.setBool(keyShowBrandNameOnBill, value);
+
+  bool get showAddressOnBill =>
+      _preferences.getBool(keyShowAddressOnBill) ?? true;
+  set showAddressOnBill(bool value) =>
+      _preferences.setBool(keyShowAddressOnBill, value);
+
+  bool get showGstinOnBill =>
+      _preferences.getBool(keyShowGstinOnBill) ?? true;
+  set showGstinOnBill(bool value) =>
+      _preferences.setBool(keyShowGstinOnBill, value);
+
+  bool get showFssaiOnBill =>
+      _preferences.getBool(keyShowFssaiOnBill) ?? true;
+  set showFssaiOnBill(bool value) =>
+      _preferences.setBool(keyShowFssaiOnBill, value);
+
+  bool get showPhoneOnBill =>
+      _preferences.getBool(keyShowPhoneOnBill) ?? true;
+  set showPhoneOnBill(bool value) =>
+      _preferences.setBool(keyShowPhoneOnBill, value);
+
+  bool get showInvoiceNoOnBill =>
+      _preferences.getBool(keyShowInvoiceNoOnBill) ?? true;
+  set showInvoiceNoOnBill(bool value) =>
+      _preferences.setBool(keyShowInvoiceNoOnBill, value);
 
   /// 👉 Show the header / footer messages on bills (messages are kept either way)
   bool get showBillHeader => _preferences.getBool(keyShowBillHeader) ?? true;

@@ -123,6 +123,10 @@ dev_dependencies:
 dependency_overrides:
   # Gauges 34.2.3 needs core 34; XlsIO 31 cannot move to 34 on Dart 3.9.
   syncfusion_flutter_core: 34.2.3
+  # Patched copy of 0.0.18: native startScan/stopScan errors are returned to
+  # Dart instead of crashing the app with abort() on Windows.
+  flutter_blue_plus_winrt:
+    path: packages/flutter_blue_plus_winrt
 
 flutter:
   uses-material-design: true

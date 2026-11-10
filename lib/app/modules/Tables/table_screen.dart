@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Tables/reserve_table_dialog.dart';
+import 'package:billkaro/app/modules/Tables/round_table_view.dart';
 import 'package:billkaro/app/modules/Tables/table_form_dialog.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/config/config.dart';
@@ -262,9 +263,11 @@ class _TableScreenState extends State<TableScreen> {
                                                   maxCrossAxisExtent: maxExtent,
                                                   crossAxisSpacing: 12,
                                                   mainAxisSpacing: 12,
+                                                  // Taller cards leave room for
+                                                  // the round table graphic.
                                                   childAspectRatio: width >= 900
-                                                      ? 1.2
-                                                      : 1.1,
+                                                      ? 0.95
+                                                      : 0.85,
                                                 ),
                                             delegate: SliverChildBuilderDelegate(
                                               (context, index) {
@@ -1638,14 +1641,13 @@ class _TableCardState extends State<_TableCard> {
                     ],
                   ),
                 ),
-                Text(
-                  table.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
+                // Round table with one chair per seat.
+                Expanded(
+                  child: RoundTableView(
+                    label: table.displayName,
+                    seats: table.seatingCapacity,
+                    color: statusColor,
+                    labelColor: colorScheme.onSurface,
                   ),
                 ),
                 if (isMerged) ...[

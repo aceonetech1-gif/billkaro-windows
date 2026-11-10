@@ -42,11 +42,21 @@ class LogoGenerator {
   static Future<List<int>> generateRaster(
     String? storedLogo, {
     ThermalPaperSize paperSize = ThermalPaperSize.mm58,
+
+    /// Fraction (0–1] of the paper's max logo box ("Logo size" setting).
+    double scale = 1.0,
   }) async {
     final url = resolvedMediaUrl(storedLogo);
     if (url.isEmpty) return [];
 
-    final cacheKey = '$url@${paperSize.storageKey}';
+    final s = scale.clamp(0.1, 1.0);
+    var maxWidth = (paperSize.logoMaxWidthDots * s).round();
+    maxWidth = (maxWidth - maxWidth % 8).clamp(8, paperSize.logoMaxWidthDots);
+    final maxHeight = (paperSize.logoMaxHeightDots * s).round().clamp(
+      8,
+      paperSize.logoMaxHeightDots,
+    );
+    final cacheKey = '$url@${paperSize.storageKey}@$maxWidth';
     final cached = _rasterCache[cacheKey];
     if (cached != null) return cached;
 
@@ -58,8 +68,8 @@ class LogoGenerator {
         _buildRaster,
         (
           bytes: bytes,
-          maxWidth: paperSize.logoMaxWidthDots,
-          maxHeight: paperSize.logoMaxHeightDots,
+          maxWidth: maxWidth,
+          maxHeight: maxHeight,
         ),
       );
       if (raster.isNotEmpty) _rasterCache[cacheKey] = raster;
