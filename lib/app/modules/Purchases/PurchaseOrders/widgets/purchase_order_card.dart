@@ -93,7 +93,7 @@ class PurchaseOrderCard extends StatelessWidget {
                             loc: loc,
                             canEdit: _canEdit && _canMutate,
                             canCancel: _isOpen && _canMutate,
-                            canReceive: _isOpen && _canMutate,
+                            canReceive: _isOpen && po.status != 'DRAFT' && _canMutate,
                             onEdit: () => controller.openEditDrawer(po),
                             onDetails: () => controller.openDetails(po),
                             onPrint: () => PurchaseOrderPdfService.printOrPreview(

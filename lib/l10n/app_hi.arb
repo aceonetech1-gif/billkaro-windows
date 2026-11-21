@@ -933,6 +933,8 @@
   "enable_inventory_subtitle": "स्टॉक, आपूर्तिकर्ता, रेसिपी और खरीद ऑर्डर सक्षम करें",
   "add_details_on_create_order": "ऑर्डर बनाते समय विवरण जोड़ें",
   "add_details_on_create_order_subtitle": "ग्राहक, टेबल, छूट और भुगतान के लिए विवरण जोड़ें दिखाएं",
+  "auto_whatsapp_on_create_order": "ऑर्डर बनाने पर ऑटो व्हाट्सएप",
+  "auto_whatsapp_on_create_order_subtitle": "ऑर्डर बनाने के बाद ग्राहक को व्हाट्सएप पर ऑर्डर विवरण भेजें",
   "kitchen_display_in_browser": "ब्राउज़र में किचन डिस्प्ले",
   "kitchen_display_browser_subtitle": "दूसरे मॉनिटर या TV पर वेब किचन स्क्रीन खोलें",
   "kitchen_display_browser_subtitle_device": "दूसरे डिवाइस पर वेब किचन स्क्रीन खोलें",

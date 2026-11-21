@@ -35,48 +35,36 @@ class SidebarNavItem extends StatelessWidget {
         selectedOverride ?? (selectedIndex == index && !isSignOut);
 
     final item = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Material(
-        color: isSelected
-            ? AppColor.primary.withOpacity(0.22)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        color: isSelected ? SidebarColors.activeBackground : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: () => _onTap(context),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
+          hoverColor: SidebarColors.hover,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: collapsed ? 10 : 12,
-              vertical: 9.5,
+              horizontal: collapsed ? 10 : 10,
+              vertical: 9,
             ),
             child: Row(
               children: [
-                if (isSelected && !collapsed)
-                  Container(
-                    width: 3,
-                    height: 18,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      color: AppColor.primary,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
                 SizedBox(width: 24, height: 24, child: Center(child: icon)),
                 if (!collapsed) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       label,
                       style: TextStyle(
                         color: isSignOut
-                            ? SidebarColors.textInactive
+                            ? const Color(0xFFF87171)
                             : (isSelected
                                   ? SidebarColors.textActive
                                   : SidebarColors.textInactive),
                         fontSize: 13.5,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w500,
-                        letterSpacing: 0.1,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

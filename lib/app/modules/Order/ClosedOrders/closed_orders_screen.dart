@@ -451,7 +451,14 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
             parent: ClampingScrollPhysics(),
           ),
           controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          // Extra bottom space so the last card's print/delete buttons can
+          // scroll clear of the floating "Add Order" button.
+          padding: EdgeInsets.fromLTRB(
+            16,
+            8,
+            16,
+            StaffAccess.canShowCreateOrder ? 96 : 16,
+          ),
           itemCount: orders.length + (isLoadingMore || hasMore ? 1 : 0),
           separatorBuilder: (_, __) => const SizedBox(height: 14),
           itemBuilder: (context, index) {

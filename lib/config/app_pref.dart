@@ -39,6 +39,8 @@ class AppPref {
   static const String keyShowGstSplitOnBill = 'show_gst_split_on_bill';
   static const String keyShowAddDetailsOnCreateOrder =
       'show_add_details_on_create_order';
+  static const String keyAutoWhatsAppOnCreateOrder =
+      'auto_whatsapp_on_create_order';
   static const String keyDownloadPath = 'download_path';
   static const String keyQrMenuBaseUrl = 'qr_menu_base_url';
   static const String keyInventoryEnabled = 'inventory_enabled';
@@ -317,6 +319,12 @@ class AppPref {
       _preferences.getBool(keyShowAddDetailsOnCreateOrder) ?? true;
   set showAddDetailsOnCreateOrder(bool value) =>
       _preferences.setBool(keyShowAddDetailsOnCreateOrder, value);
+
+  /// Auto-open WhatsApp with order details for the customer after a new order is saved.
+  bool get autoWhatsAppOnCreateOrder =>
+      _preferences.getBool(keyAutoWhatsAppOnCreateOrder) ?? false;
+  set autoWhatsAppOnCreateOrder(bool value) =>
+      _preferences.setBool(keyAutoWhatsAppOnCreateOrder, value);
 
   /// 👉 Preferred download directory for saved files
   String get downloadPath => _preferences.getString(keyDownloadPath) ?? '';

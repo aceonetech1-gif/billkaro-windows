@@ -106,13 +106,18 @@ class _HorizontalScrollWithArrowsState extends State<HorizontalScrollWithArrows>
               child: Scrollbar(
                 controller: _controller,
                 thumbVisibility: true,
-                trackVisibility: true,
+                trackVisibility: false,
+                thickness: 4,
+                radius: const Radius.circular(4),
                 interactive: true,
                 scrollbarOrientation: ScrollbarOrientation.bottom,
                 child: SingleChildScrollView(
                   controller: _controller,
                   scrollDirection: Axis.horizontal,
                   physics: const ClampingScrollPhysics(),
+                  // Room below the chips so the scrollbar sits under them
+                  // instead of drawing over them.
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: widget.child,
                 ),
               ),

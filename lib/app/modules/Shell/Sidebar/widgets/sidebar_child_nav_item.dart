@@ -21,7 +21,7 @@ class SidebarChildNavItem extends StatelessWidget {
       padding: const EdgeInsets.only(top: 2, bottom: 2),
       child: Material(
         color: selected
-            ? AppColor.primary.withOpacity(0.18)
+            ? SidebarColors.childActiveBackground
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
@@ -30,21 +30,11 @@ class SidebarChildNavItem extends StatelessWidget {
             targetRoute,
           ),
           borderRadius: BorderRadius.circular(8),
+          hoverColor: SidebarColors.hover,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               children: [
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColor.primary
-                        : SidebarColors.iconInactive,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     label,

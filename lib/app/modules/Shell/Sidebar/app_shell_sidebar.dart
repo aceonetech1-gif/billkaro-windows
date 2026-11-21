@@ -118,30 +118,11 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
       kotEnabled: kotEnabled,
       hasSeating: hasSeating,
     );
-    final primary = AppColor.primary;
-    final activeBackground = primary.withOpacity(0.22);
+    final activeBackground = SidebarColors.activeBackground;
 
     return Container(
       width: width,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.alphaBlend(
-              primary.withOpacity(0.24),
-              const Color(0xFF0F172A),
-            ),
-            Color.alphaBlend(
-              primary.withOpacity(0.12),
-              const Color(0xFF070B17),
-            ),
-          ],
-        ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(2, 0)),
-        ],
-      ),
+      color: SidebarColors.background,
       child: Column(
         children: [
           SidebarHeader(
@@ -165,7 +146,13 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
               activeBackground: activeBackground,
             ),
           ),
-          const Divider(height: 1, color: SidebarColors.divider),
+          const Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: SidebarColors.divider,
+          ),
+          const SizedBox(height: 6),
           SidebarNavItem(
             selectedIndex: widget.selectedIndex,
             collapsed: widget.collapsed,
@@ -203,7 +190,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
             icon: Icon(
               Icons.logout_rounded,
               size: AppShellSidebar.navIconSize,
-              color: SidebarColors.iconInactive,
+              color: const Color(0xFFF87171),
             ),
           ),
           SidebarSubscriptionCard(collapsed: widget.collapsed, loc: loc),

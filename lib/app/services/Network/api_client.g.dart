@@ -2352,10 +2352,7 @@ class _ApiClient implements ApiClient {
   }
 
   @override
-  Future<dynamic> getHomeAnalytics(
-    String outletId, {
-    int? topLimit,
-  }) async {
+  Future<dynamic> getHomeAnalytics(String outletId, {int? topLimit}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'topLimit': topLimit};
     queryParameters.removeWhere((k, v) => v == null);
@@ -2696,14 +2693,16 @@ class _ApiClient implements ApiClient {
     String? rawMaterialId,
     String? type,
     int? page,
-    int? limit,
-  ) async {
+    int? limit, [
+    String? date,
+  ]) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'rawMaterialId': rawMaterialId,
       r'type': type,
       r'page': page,
       r'limit': limit,
+      r'date': date,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

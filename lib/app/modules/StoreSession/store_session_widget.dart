@@ -1,4 +1,4 @@
-import 'package:billkaro/app/modules/StoreSession/store_close_dialog.dart';
+﻿import 'package:billkaro/app/modules/StoreSession/store_close_dialog.dart';
 import 'package:billkaro/app/modules/StoreSession/store_open_dialog.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
 import 'package:billkaro/config/config.dart';
@@ -276,12 +276,12 @@ class StoreSessionChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isSidebar
-            ? (background ?? Colors.white.withOpacity(0.08))
+            ? (background ?? const Color(0xFF111A2E))
             : background,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isSidebar
-              ? (border ?? Colors.white24)
+              ? (border ?? const Color(0xFF1E293B))
               : (border ?? Colors.transparent),
           width: 1,
         ),
@@ -422,7 +422,7 @@ class StoreSessionSidebarInfo extends StatelessWidget {
               Text(
                 '${loc.opened_at} $opened',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.72),
+                  color: const Color(0xFF64748B),
                   fontSize: 11,
                 ),
               ),
@@ -433,7 +433,7 @@ class StoreSessionSidebarInfo extends StatelessWidget {
                   child: Text(
                     '${loc.opened_by}: ${session.openedByName}',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.72),
+                      color: const Color(0xFF64748B),
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),

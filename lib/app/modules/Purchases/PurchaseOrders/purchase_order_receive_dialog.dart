@@ -63,12 +63,12 @@ Future<void> showReceivePurchaseOrderDialog(
             onPressed: () {
               for (final line in pendingLines) {
                 final pending = line.quantity - line.receivedQuantity;
-                final qty = double.tryParse(qtyCtrls[line.id]!.text.trim());
+                final qty = double.tryParse(qtyCtrls[line.id]!.text.trim().replaceAll(',', '.'));
                 if (qty == null || qty < 0) {
                   showError(description: 'Enter a valid receive quantity');
                   return;
                 }
-                if (qty > pending + 1e-9) {
+                if (qty > pending + _qtyEpsilon) {
                   showError(
                     description: 'Cannot receive more than pending quantity',
                   );
@@ -88,7 +88,11 @@ Future<void> showReceivePurchaseOrderDialog(
 
     final items = <Map<String, dynamic>>[];
     for (final line in pendingLines) {
-      final qty = double.tryParse(qtyCtrls[line.id]!.text.trim()) ?? 0;
+      final pending = line.quantity - line.receivedQuantity;
+      var qty = double.tryParse(qtyCtrls[line.id]!.text.trim().replaceAll(',', '.')) ?? 0;
+      // Snap to the exact pending amount so float noise can't leave a
+      // tiny remainder that keeps the PO open forever.
+      if ((qty - pending).abs() <= _qtyEpsilon) qty = pending;
       if (qty > 0) {
         items.add({
           'purchaseOrderItemId': line.id,
@@ -106,15 +110,27 @@ Future<void> showReceivePurchaseOrderDialog(
       showSuccess(description: 'Stock updated');
     }
   } finally {
-    for (final c in qtyCtrls.values) {
-      c.dispose();
-    }
+    // Delay dispose until after the dialog's pop animation.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      for (final c in qtyCtrls.values) {
+        c.dispose();
+      }
+    });
   }
 }
 
+const double _qtyEpsilon = 1e-6;
+
+/// Full precision (up to 6 decimals, trailing zeros trimmed). Rounding to 2
+/// decimals made e.g. 2.125 pre-fill as "2.13", which then failed validation.
 String _fmtQty(double value) {
-  if (value == value.roundToDouble()) return value.toInt().toString();
-  return value.toStringAsFixed(2);
+  if ((value - value.roundToDouble()).abs() < _qtyEpsilon) {
+    return value.round().toString();
+  }
+  var s = value.toStringAsFixed(6);
+  s = s.replaceFirst(RegExp(r'0+$'), '');
+  if (s.endsWith('.')) s = s.substring(0, s.length - 1);
+  return s;
 }
 
 class _ReceiveLineRow extends StatelessWidget {

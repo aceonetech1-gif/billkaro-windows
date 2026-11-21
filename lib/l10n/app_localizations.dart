@@ -4151,6 +4151,18 @@ abstract class AppLocalizations {
   /// **'Show Add Details for customer, table, discount, and payment'**
   String get add_details_on_create_order_subtitle;
 
+  /// No description provided for @auto_whatsapp_on_create_order.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto WhatsApp on create order'**
+  String get auto_whatsapp_on_create_order;
+
+  /// No description provided for @auto_whatsapp_on_create_order_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send order details to customer on WhatsApp after creating an order'**
+  String get auto_whatsapp_on_create_order_subtitle;
+
   /// No description provided for @kitchen_display_in_browser.
   ///
   /// In en, this message translates to:

@@ -1166,6 +1166,7 @@ Future<void> showCreatePurchaseOrderDialog(
         final ok = editPo != null
             ? await po.updatePurchaseOrder(
                 poId: editPo.id,
+                status: status,
                 supplierId: supplierId,
                 items: items,
                 notes: notesCtrl.text.trim(),

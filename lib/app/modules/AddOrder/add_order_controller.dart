@@ -80,6 +80,13 @@ class AddOrderController extends BaseController {
   final RxInt itemsPerPage = 50.obs;
   final RxBool hasMoreItems = true.obs;
   final RxBool isLoadingMore = false.obs;
+
+  /// True while the first page for the current category/search is loading.
+  final RxBool isLoadingItems = false.obs;
+
+  /// Bumped on every fresh (non-append) load so late responses from an
+  /// older category/search can't overwrite the current grid.
+  int _itemsRequestSeq = 0;
   final RxString searchQuery = ''.obs;
   final RxString selectedCategoryId = 'none'.obs;
 
@@ -93,6 +100,9 @@ class AddOrderController extends BaseController {
 
   /// Quantities already deducted for the open edit order (server-side stock).
   final Map<String, int> committedStockQuantities = <String, int>{};
+
+  /// Hard cap per cart line (previously enforced silently).
+  static const int _maxQtyPerLine = 100;
 
   /// Per-line remarks (itemId → note), sent as `itemRemark` on each order item.
   final RxMap<String, String> itemRemarks = <String, String>{}.obs;
@@ -492,6 +502,7 @@ class AddOrderController extends BaseController {
 
     await getCategories();
     await getItems();
+    _deriveCategoriesFromLoadedItems();
     await _loadPromotions();
     await ensureMissingItemCategories();
     await loadRecommendedItems();
@@ -545,8 +556,12 @@ class AddOrderController extends BaseController {
         itemId: item.itemId,
         variantId: item.variantId,
       );
-      itemQuantities[lineKey] = item.quantity ?? 1;
-      committedStockQuantities[lineKey] = item.quantity ?? 1;
+      // The same item/variant can appear on several order lines — sum them
+      // instead of letting the last line overwrite the others.
+      final qty = item.quantity ?? 1;
+      itemQuantities[lineKey] = (itemQuantities[lineKey] ?? 0) + qty;
+      committedStockQuantities[lineKey] =
+          (committedStockQuantities[lineKey] ?? 0) + qty;
       final remark = item.itemRemark?.trim();
       if (remark != null && remark.isNotEmpty) {
         itemRemarks[lineKey] = remark;
@@ -706,7 +721,7 @@ class AddOrderController extends BaseController {
         variantId: orderItem.variantId,
       );
       final quantity = orderItem.quantity ?? 1;
-      itemQuantities[lineKey] = quantity;
+      itemQuantities[lineKey] = (itemQuantities[lineKey] ?? 0) + quantity;
     }
 
     // Recalculate totals
@@ -722,6 +737,8 @@ class AddOrderController extends BaseController {
 
   void clearSearch() {
     _searchDebounce?.cancel();
+    _itemsRequestSeq++;
+    isLoadingItems.value = true;
     searchQuery.value = '';
     currentPage.value = 1;
     items.clear();
@@ -731,6 +748,8 @@ class AddOrderController extends BaseController {
 
   void filterItemsBySearch(String query) {
     searchQuery.value = query;
+    _itemsRequestSeq++;
+    isLoadingItems.value = true;
     currentPage.value = 1;
     items.clear();
     hasMoreItems.value = true;
@@ -751,7 +770,10 @@ class AddOrderController extends BaseController {
 
   // Load more items (called when scrolling)
   Future<void> loadMoreItems() async {
-    if (isLoadingMore.value || !hasMoreItems.value) return;
+    // Never append while a fresh page-1 load is in flight (it would be overwritten).
+    if (isLoadingItems.value || isLoadingMore.value || !hasMoreItems.value) {
+      return;
+    }
 
     currentPage.value++;
     await getItems(append: true);
@@ -776,6 +798,7 @@ class AddOrderController extends BaseController {
     searchQuery.value = '';
     await getCategories();
     await getItems();
+    _deriveCategoriesFromLoadedItems();
   }
 
   // --------------------
@@ -893,10 +916,21 @@ class AddOrderController extends BaseController {
     final availableStock = variant?.trackStock == true
         ? variant!.stockQuantity
         : item.stockQuantity;
+    if (current >= _maxQtyPerLine) {
+      showError(description: 'Maximum quantity per item is $_maxQtyPerLine');
+      return;
+    }
     if (trackStock) {
-      final committed = committedStockQuantities[lineKey] ?? 0;
+      // Stock is shared by every cart line of the same item/variant
+      // (normal + promo free lines), so check the cart-wide total.
+      final stockVariantId = variant?.trackStock == true ? variant!.id : null;
+      final inCart = _quantityInCart(parsed.itemId, variantId: stockVariantId);
+      final committed = _committedStockFor(
+        parsed.itemId,
+        variantId: stockVariantId,
+      );
       final maxAllowed = availableStock + committed;
-      if (current >= maxAllowed) {
+      if (inCart + 1 > maxAllowed + 1e-9) {
         final label = variant != null
             ? '${item.itemName} ${variant.name}'
             : item.itemName;
@@ -910,9 +944,6 @@ class AddOrderController extends BaseController {
     }
 
     itemQuantities[lineKey] = current + 1;
-    if (itemQuantities[lineKey]! > 100) {
-      itemQuantities[lineKey] = 100;
-    }
     _notifyQtyChange(parsed.itemId, currentParent);
     scheduleCalculateTotals();
   }
@@ -984,16 +1015,21 @@ class AddOrderController extends BaseController {
     final resolved = _resolveLine(lineKey);
     final item = resolved.item;
     final variant = resolved.variant;
-    final unitPrice = PromoCartLine.isPromo(lineKey)
+    final frozen = isEdit.value ? _frozenOrderItem(lineKey) : null;
+    final isPromo = PromoCartLine.isPromo(lineKey);
+    final unitPrice = isPromo
         ? 0.0
-        : (variant?.salePrice ?? item.salePrice);
+        : (frozen?.salePrice ?? variant?.salePrice ?? item.salePrice);
+    final effectiveGst = isPromo
+        ? 0.0
+        : (frozen?.gst ?? (item.withTax ? item.gst.toDouble() : 0.0));
     return OrderItem(
       itemId: item.id,
       itemName: item.itemName,
       category: item.category,
       quantity: quantity,
       salePrice: unitPrice,
-      gst: item.gst.toDouble(),
+      gst: effectiveGst,
       kotSentQuantity: kotSentQuantity,
       itemRemark: PromoCartLine.isPromo(lineKey)
           ? (_itemRemarkFor(lineKey) ?? 'Promo item')
@@ -1097,9 +1133,10 @@ class AddOrderController extends BaseController {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
     try {
-      final rules = await PromotionSync(apiClient: apiClient, db: db).load(
-        outletId: outletId,
-      );
+      final rules = await PromotionSync(
+        apiClient: apiClient,
+        db: db,
+      ).load(outletId: outletId);
       activePromotions
         ..clear()
         ..addAll(rules.where((rule) => rule.active));
@@ -1258,10 +1295,7 @@ class AddOrderController extends BaseController {
 
       for (final rule in activePromotions) {
         final existingKey = PromoCartLine.findLineKey(itemQuantities, rule.id);
-        final result = PromotionEngine.evaluate(
-          rule: rule,
-          ctx: ctx,
-        );
+        final result = PromotionEngine.evaluate(rule: rule, ctx: ctx);
 
         if (result == null) {
           _removePromoLine(existingKey);
@@ -1320,6 +1354,21 @@ class AddOrderController extends BaseController {
         if (existingKey != null) {
           final currentQty = itemQuantities[existingKey] ?? 0;
           if (currentQty != result.freeQuantity) {
+            final parsedPromo = PromoCartLine.itemId(existingKey);
+            final promoVariant = PromoCartLine.variantId(existingKey);
+            final totalAfter =
+                _quantityInCart(parsedPromo, variantId: promoVariant) -
+                currentQty +
+                result.freeQuantity;
+            if (result.freeQuantity > currentQty &&
+                !_canAddPromoQuantity(
+                  itemId: parsedPromo,
+                  variantId: promoVariant,
+                  targetQty: totalAfter,
+                )) {
+              showError(description: 'Not enough stock for the free item');
+              continue;
+            }
             itemQuantities[existingKey] = result.freeQuantity;
           }
           continue;
@@ -2219,10 +2268,13 @@ class AddOrderController extends BaseController {
   // --------------------
   Future<void> _syncInventoryAfterSale() async {
     try {
-      await getItems();
-      final inventory = Get.isRegistered<InventoryController>()
-          ? Get.find<InventoryController>()
-          : Get.put(InventoryController());
+      // Do not reload the menu grid here: after a bill only the cart is
+      // cleared and the loaded items stay exactly as they were.
+      // Only refresh an inventory screen that is already alive. Creating one
+      // here runs its full onInit load *and* the refresh below (double load)
+      // and leaves the controller in memory.
+      if (!Get.isRegistered<InventoryController>()) return;
+      final inventory = Get.find<InventoryController>();
       await Future.wait([
         inventory.loadProductStock(),
         inventory.loadRawMaterials(),
@@ -2234,14 +2286,24 @@ class AddOrderController extends BaseController {
     }
   }
 
+  /// Appends a page, skipping items already loaded (overlapping page loads
+  /// used to duplicate items, which broke the grid with duplicate keys).
+  void _appendUnique(List<ItemData> page) {
+    final seen = items.map((i) => i.id).toSet();
+    items.addAll(page.where((i) => seen.add(i.id)));
+  }
+
   Future<void> getItems({
     bool append = false,
     bool isFromSearch = false,
   }) async {
     final db = AppDatabase();
+    final requestSeq = append ? _itemsRequestSeq : ++_itemsRequestSeq;
+    bool isStale() => requestSeq != _itemsRequestSeq;
 
     try {
       if (!append) {
+        isLoadingItems.value = true;
         isLoadingMore.value = false;
       } else {
         isLoadingMore.value = true;
@@ -2281,15 +2343,16 @@ class AddOrderController extends BaseController {
             true, // showItem - only available items
             null,
           ),
-          // Avoid showing full-screen loader for incremental search
-          showLoader: !append && !isFromSearch,
+          // Inline grid loading state — never block the POS.
+          showLoader: false,
         );
+        if (isStale()) return;
 
         if (response?.status == 'success') {
           final newItems = response!.data ?? [];
 
           if (append) {
-            items.addAll(newItems);
+            _appendUnique(newItems);
           } else {
             items.value = newItems;
             if (!isFromSearch && selectedCategoryId.value == 'none') {
@@ -2320,9 +2383,9 @@ class AddOrderController extends BaseController {
           if (outletId != null && newItems.isNotEmpty) {
             await db.saveItems(newItems, outletId);
             unawaited(
-              ItemCatalogSync(apiClient: apiClient).pullCatalogInBackground(
-                outletId,
-              ),
+              ItemCatalogSync(
+                apiClient: apiClient,
+              ).pullCatalogInBackground(outletId),
             );
           }
 
@@ -2331,25 +2394,31 @@ class AddOrderController extends BaseController {
           );
         } else {
           debugPrint('getItems: unexpected response: $response');
-          await _applyLocalItems(append: append);
+          await _applyLocalItems(append: append, isStale: isStale);
         }
       } else {
         debugPrint('🌐 Offline → Fetching items from SQLite');
-        await _applyLocalItems(append: append);
+        await _applyLocalItems(append: append, isStale: isStale);
       }
 
       isLoadingMore.value = false;
     } catch (e, st) {
       debugPrint('getItems error: $e\n$st');
+      if (isStale()) return;
       try {
-        await _applyLocalItems(append: append);
+        await _applyLocalItems(append: append, isStale: isStale);
       } catch (_) {}
       isLoadingMore.value = false;
       hasMoreItems.value = false;
+    } finally {
+      if (!append && !isStale()) isLoadingItems.value = false;
     }
   }
 
-  Future<void> _applyLocalItems({required bool append}) async {
+  Future<void> _applyLocalItems({
+    required bool append,
+    bool Function()? isStale,
+  }) async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
       if (!append) items.clear();
@@ -2371,9 +2440,10 @@ class AddOrderController extends BaseController {
       categoryId: categoryFilter,
       showItemOnly: true,
     );
+    if (isStale?.call() ?? false) return;
 
     if (append) {
-      items.addAll(pageResult.items);
+      _appendUnique(pageResult.items);
     } else {
       items.value = pageResult.items;
     }
@@ -2388,20 +2458,71 @@ class AddOrderController extends BaseController {
     }
   }
 
+  /// Incremented per call so a slow, stale response can't overwrite a newer one.
+  int _categoriesRequestId = 0;
+
   Future<void> getCategories() async {
+    final requestId = ++_categoriesRequestId;
     try {
-      final outletId = appPref.selectedOutlet?.id;
+      // The selected outlet can still be restoring right after app start /
+      // outlet switch; wait briefly instead of silently giving up.
+      String? outletId = appPref.selectedOutlet?.id;
+      for (var i = 0; outletId == null && i < 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (requestId != _categoriesRequestId) return;
+        outletId = appPref.selectedOutlet?.id;
+      }
       if (outletId == null) return;
 
-      final loaded = await OfflineCategoryLoader.load(
+      var loaded = await OfflineCategoryLoader.load(
         outletId: outletId,
-        fetchFromApi: () => callApi(apiClient.getCategories(outletId)),
+        fetchFromApi: () => callApi(apiClient.getCategories(outletId!)),
       );
-      categories.value = loaded.where((c) => c.isActive).toList();
-      dismissAllAppLoader();
+      // A transient network/API hiccup can yield an empty list; retry once.
+      if (loaded.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (requestId != _categoriesRequestId) return;
+        loaded = await OfflineCategoryLoader.load(
+          outletId: outletId,
+          fetchFromApi: () => callApi(apiClient.getCategories(outletId!)),
+        );
+      }
+      if (requestId != _categoriesRequestId) return;
+      categories.assignAll(loaded.where((c) => c.isActive));
     } catch (e, st) {
       debugPrint('getCategories error: $e\n$st');
+    } finally {
+      dismissAllAppLoader();
     }
+  }
+
+  /// Last-resort fallback: build category pills from the items already loaded
+  /// so the toolbar is never blank while the menu has categorised items.
+  void _deriveCategoriesFromLoadedItems() {
+    if (categories.isNotEmpty || allItemsMap.isEmpty) return;
+    final outletId = appPref.selectedOutlet?.id ?? '';
+    final now = DateTime.now();
+    final seen = <String>{};
+    final derived = <CategoryData>[];
+    for (final item in allItemsMap.values) {
+      final name = item.category.trim();
+      if (name.isEmpty || name.toLowerCase() == 'none') continue;
+      if (!seen.add(name.toLowerCase())) continue;
+      derived.add(
+        CategoryData(
+          id: 'local_cat_${name.hashCode.abs()}',
+          userId: item.userId,
+          outletId: outletId,
+          categoryName: name,
+          imageURL: '',
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+    derived.sort((a, b) => a.categoryName.compareTo(b.categoryName));
+    if (derived.isNotEmpty) categories.assignAll(derived);
   }
 
   /// Persists item categories that exist on items but not in the categories API
@@ -2749,10 +2870,7 @@ class AddOrderController extends BaseController {
                         );
                         return;
                       }
-                      saveAndBill(
-                        'closed',
-                        chargePlatformFee: charge,
-                      );
+                      saveAndBill('closed', chargePlatformFee: charge);
                     },
                     child: Text(loc.print_bill),
                   ),
@@ -3048,6 +3166,10 @@ class AddOrderController extends BaseController {
       }
     }
 
+    // Finish pending cart/promotion changes before snapshotting the order.
+    _totalsDebounce?.cancel();
+    await calculateTotals();
+
     final kotDeltaForPrint = buildKotDeltaItems();
     final hadKitchenDelta = kotDeltaForPrint.isNotEmpty;
     final sendToKitchen = _shouldSendToKitchen(
@@ -3285,6 +3407,7 @@ class AddOrderController extends BaseController {
             serverBillNumber != null && serverBillNumber.isNotEmpty
             ? copyRequestWithBillNumber(request, serverBillNumber)
             : request;
+        final autoWhatsApp = _shouldAutoWhatsApp(invoiceRequest);
         await _finishSaveLeaveOrReset(
           isHoldOnly: isHoldOnly,
           isBilling: isBilling,
@@ -3300,6 +3423,7 @@ class AddOrderController extends BaseController {
                 'orderFrom':
                     invoiceRequest.orderFrom ?? selectedOrderSource.value,
                 'isEdit': isEdit.value,
+                'autoWhatsApp': autoWhatsApp,
                 'isOffline': false,
                 'fromCreateOrder': true,
               },
@@ -3413,7 +3537,9 @@ class AddOrderController extends BaseController {
       }
 
       if (saved == null) {
-        debugPrint('Store host upsert failed — falling back to local/cloud save');
+        debugPrint(
+          'Store host upsert failed — falling back to local/cloud save',
+        );
         return false;
       }
 
@@ -3428,7 +3554,9 @@ class AddOrderController extends BaseController {
       if (hostModel.billNumber.trim().isNotEmpty) {
         syncLocalOutletBillNumber(appPref, hostModel.billNumber);
         unawaited(
-          BillNumberAllocator.instance.reconcileFromIssued(hostModel.billNumber),
+          BillNumberAllocator.instance.reconcileFromIssued(
+            hostModel.billNumber,
+          ),
         );
       }
 
@@ -3482,6 +3610,7 @@ class AddOrderController extends BaseController {
       }
 
       showSuccess(description: loc.order_saved);
+      final autoWhatsApp = _shouldAutoWhatsApp(invoiceRequest);
       await _finishSaveLeaveOrReset(
         isHoldOnly: isHoldOnly,
         isBilling: isBilling,
@@ -3497,6 +3626,7 @@ class AddOrderController extends BaseController {
               'orderFrom':
                   invoiceRequest.orderFrom ?? selectedOrderSource.value,
               'isEdit': isEdit.value,
+              'autoWhatsApp': autoWhatsApp,
               'isOffline': false,
               'fromCreateOrder': true,
             },
@@ -3612,10 +3742,7 @@ class AddOrderController extends BaseController {
         orderDetails['id'] = orderId;
         orderDetails['billNumber'] = savedRequest.billNumber;
         await _enterEditModeAfterSave(
-          responseData: {
-            'id': orderId,
-            'billNumber': savedRequest.billNumber,
-          },
+          responseData: {'id': orderId, 'billNumber': savedRequest.billNumber},
           request: savedRequest,
         );
         await _runPostSaveUiRefresh(
@@ -3628,6 +3755,7 @@ class AddOrderController extends BaseController {
       }
 
       showSuccess(description: loc.order_saved_offline);
+      final autoWhatsApp = _shouldAutoWhatsApp(savedRequest);
       await _finishSaveLeaveOrReset(
         isHoldOnly: isHoldOnly,
         isBilling: isBilling,
@@ -3643,6 +3771,7 @@ class AddOrderController extends BaseController {
               'orderFrom':
                   savedRequest.orderFrom ?? selectedOrderSource.value,
               'isEdit': isEdit.value,
+              'autoWhatsApp': autoWhatsApp,
               'isOffline': true,
               'fromCreateOrder': true,
             },
@@ -3832,7 +3961,7 @@ class AddOrderController extends BaseController {
       final lineTax = _lineChargedTax(
             isPromo: isPromo,
             gstRate: gstRate,
-            itemWithTax: resolved?.item.withTax,
+            itemWithTax: frozen != null ? true : resolved?.item.withTax,
           )
           ? lineSubtotal * gstRate / 100.0
           : 0.0;
@@ -3943,6 +4072,14 @@ class AddOrderController extends BaseController {
     } catch (_) {
       return false;
     }
+  }
+
+  /// True when the invoice screen should auto-share the PDF on WhatsApp
+  /// ("Auto WhatsApp on create order" on, new order, phone present).
+  bool _shouldAutoWhatsApp(CreateorderRequest request) {
+    if (isEdit.value || !appPref.autoWhatsAppOnCreateOrder) return false;
+    final digits = (request.phoneNumber ?? '').replaceAll(RegExp(r'\D'), '');
+    return digits.length >= 10;
   }
 
   /// After save: reset for a new order only if staff may create sales.
@@ -4149,10 +4286,7 @@ class AddOrderController extends BaseController {
 
   void notifyPosItemUi(String itemId, {bool structureChanged = false}) {
     if (itemId.isEmpty) return;
-    update([
-      posItemUiId(itemId),
-      if (structureChanged) 'pos_list_structure',
-    ]);
+    update([posItemUiId(itemId), if (structureChanged) 'pos_list_structure']);
   }
 
   void _notifyQtyChange(String itemId, int beforeParentQty) {

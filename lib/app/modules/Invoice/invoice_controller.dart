@@ -16,6 +16,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InvoicePreviewController extends BaseController {
   final phone = ''.obs;
@@ -355,14 +356,23 @@ class InvoicePreviewController extends BaseController {
   }
 
   Future<void> _withLoader(Future<void> Function() fn) async {
-    Get.dialog(
-      const Center(child: CircularProgressIndicator()),
-      barrierDismissible: false,
-    );
+    // Track our own route so it is always removed, even if a snackbar/toast
+    // or another route is on top (Get.isDialogOpen would be false then).
+    final nav = Get.key.currentState;
+    Route<void>? route;
+    if (nav != null) {
+      route = DialogRoute<void>(
+        context: nav.context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+      nav.push(route);
+    }
     try {
       await fn();
     } finally {
-      if (Get.isDialogOpen == true) Get.back();
+      final r = route;
+      if (r != null && r.isActive) r.navigator?.removeRoute(r);
     }
   }
 
@@ -448,6 +458,7 @@ class InvoicePreviewController extends BaseController {
     customerName.value = invoice.customerName ?? '';
     customerPhone.value = invoice.phoneNumber ?? '';
     paymentMode.value = invoice.paymentReceivedIn ?? '';
+    _scheduleAutoWhatsApp(map);
     tableNumber.value = (invoice.tableNumber ?? '').trim();
     _generateQRCode();
   }
@@ -624,6 +635,85 @@ class InvoicePreviewController extends BaseController {
     }
   }
 
+  bool _autoWhatsAppDone = false;
+
+  /// Auto-shares the invoice PDF + message on WhatsApp right after a new
+  /// order is billed ("Auto WhatsApp on create order" setting).
+  void _scheduleAutoWhatsApp(Map? args) {
+    if (_autoWhatsAppDone || args?['autoWhatsApp'] != true) return;
+    if (!appPref.autoWhatsAppOnCreateOrder) return;
+    _autoWhatsAppDone = true;
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (isClosed) return;
+      openWhatsApp(customerPhone.value, message: _autoOrderMessage());
+    });
+  }
+
+  String _autoOrderMessage() {
+    final outlet = appPref.selectedOutlet?.businessName ?? '';
+    final name = customerName.value.trim();
+    return [
+      name.isNotEmpty ? 'Hi $name,' : 'Hi,',
+      outlet.isNotEmpty
+          ? 'Thank you for your order at $outlet!'
+          : 'Thank you for your order!',
+      if (invoiceNo.value.isNotEmpty) 'Bill No: ${invoiceNo.value}',
+      'Total: Rs ${totalAmount.toStringAsFixed(2)}',
+      'Please find your invoice attached.',
+    ].join('\n');
+  }
+
+  /// True when the WhatsApp app (or WhatsApp Business) can handle links.
+  Future<bool> _isWhatsAppInstalled() async {
+    try {
+      return await canLaunchUrl(Uri.parse('whatsapp://send?phone=91'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Fallback when WhatsApp is not installed: opens WhatsApp Web on the
+  /// customer's chat with the message filled in. A web link cannot carry a
+  /// file, so on Windows the PDF is copied to the clipboard (Ctrl+V in the
+  /// chat attaches it); elsewhere it is saved to Downloads.
+  Future<void> _shareViaWhatsAppWeb(
+    String phone,
+    String message,
+    File file,
+  ) async {
+    var copied = false;
+    File? saved;
+    if (Platform.isWindows) {
+      try {
+        final escaped = file.path.replaceAll("'", "''");
+        final r = await Process.run('powershell', [
+          '-NoProfile',
+          '-Command',
+          "Set-Clipboard -Path '$escaped'",
+        ]).timeout(const Duration(seconds: 8));
+        copied = r.exitCode == 0;
+      } catch (_) {}
+    }
+    if (!copied) saved = await _savePdf(pdf, notify: false);
+
+    final uri = Uri.parse(
+      'https://web.whatsapp.com/send?phone=$phone'
+      '&text=${Uri.encodeComponent(message)}',
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      showError(description: 'Could not open WhatsApp Web');
+      return;
+    }
+    showSuccess(
+      description: copied
+          ? 'Opened WhatsApp Web — invoice PDF copied. Press Ctrl+V in the chat to attach it, then Send.'
+          : saved != null
+          ? 'Opened WhatsApp Web — attach the invoice PDF from ${saved.path}'
+          : 'Opened WhatsApp Web.',
+    );
+  }
+
   Future<void> openWhatsApp(String phoneNumber, {String? message}) async {
     try {
       dismissAllAppLoader();
@@ -644,39 +734,52 @@ class InvoicePreviewController extends BaseController {
               'Total: Rs ${totalAmount.toStringAsFixed(2)}\n'
               'Date: ${date.value} ${time.value}';
 
-      // Build PDF in temp only — do not save/download to Downloads.
+      // Build PDF in temp only (loader only while building — never while the
+      // share sheet / browser is open, so it can't get stuck).
+      File? file;
+      Uint8List? bytes;
+      var installed = true;
       await _withLoader(() async {
         _buildPdfDocument();
-        final bytes = await pdf.save();
-        if (bytes.isEmpty) {
-          showError(description: 'PDF generation failed - empty document');
-          return;
-        }
-
+        final b = await pdf.save();
+        if (b.isEmpty) return;
         final name = _sanitizeFileName(invoiceNo.value);
-        final fileName = 'invoice-$name.pdf';
         final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}${Platform.pathSeparator}$fileName');
-        await file.writeAsBytes(bytes, flush: true);
-
-        try {
-          await SharePlus.instance.share(
-            ShareParams(
-              files: [XFile(file.path, mimeType: 'application/pdf')],
-              text: invoiceMessage,
-              subject: 'Invoice ${invoiceNo.value}',
-              title: 'Invoice ${invoiceNo.value}',
-            ),
-          );
-        } on UnimplementedError {
-          await Printing.sharePdf(bytes: bytes, filename: fileName);
-        }
+        final f = File('${dir.path}${Platform.pathSeparator}invoice-$name.pdf');
+        await f.writeAsBytes(b, flush: true);
+        bytes = b;
+        file = f;
+        installed = await _isWhatsAppInstalled();
       });
+      if (file == null || bytes == null) {
+        showError(description: 'PDF generation failed - empty document');
+        return;
+      }
+
+      if (!installed) {
+        await _shareViaWhatsAppWeb(phone, invoiceMessage, file!);
+        return;
+      }
+
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file!.path, mimeType: 'application/pdf')],
+            text: invoiceMessage,
+            subject: 'Invoice ${invoiceNo.value}',
+            title: 'Invoice ${invoiceNo.value}',
+          ),
+        );
+      } on UnimplementedError {
+        await Printing.sharePdf(
+          bytes: bytes!,
+          filename: file!.uri.pathSegments.last,
+        );
+      }
     } catch (e) {
       showError(description: 'Failed to share invoice on WhatsApp: $e');
     } finally {
       dismissAllAppLoader();
-      if (Get.isDialogOpen == true) Get.back();
     }
   }
 

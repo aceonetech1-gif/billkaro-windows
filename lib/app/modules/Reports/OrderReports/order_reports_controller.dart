@@ -1348,7 +1348,6 @@ class OrderReportsController extends BaseController {
         loc.order_id,
         loc.date_time,
         loc.order_type,
-        loc.customer_id,
         loc.customer_name,
         loc.customer_phone,
         loc.service_charge_rupee,
@@ -1382,27 +1381,26 @@ class OrderReportsController extends BaseController {
         }
 
         sheet.getRangeByIndex(row, 3).setText(order.orderFrom ?? "-");
-        sheet.getRangeByIndex(row, 4).setText(order.userId ?? "-");
-        sheet.getRangeByIndex(row, 5).setText(order.customerName ?? loc.guest);
-        sheet.getRangeByIndex(row, 6).setText(order.phoneNumber ?? "-");
+        sheet.getRangeByIndex(row, 4).setText(order.customerName ?? loc.guest);
+        sheet.getRangeByIndex(row, 5).setText(order.phoneNumber ?? "-");
 
         // Service Charge
-        sheet.getRangeByIndex(row, 7).setNumber(order.serviceCharge ?? 0);
-        sheet.getRangeByIndex(row, 7).numberFormat = "₹#,##0.00";
+        sheet.getRangeByIndex(row, 6).setNumber(order.serviceCharge ?? 0);
+        sheet.getRangeByIndex(row, 6).numberFormat = "₹#,##0.00";
 
-        // Payment Method (FIXED column index 8)
-        sheet.getRangeByIndex(row, 8).setText(order.paymentReceivedIn ?? '-');
+        // Payment Method
+        sheet.getRangeByIndex(row, 7).setText(order.paymentReceivedIn ?? '-');
 
-        // Amount (FIXED column index 9)
-        sheet.getRangeByIndex(row, 9).setNumber(order.totalAmount ?? 0);
-        sheet.getRangeByIndex(row, 9).numberFormat = "₹#,##0.00";
+        // Amount
+        sheet.getRangeByIndex(row, 8).setNumber(order.totalAmount ?? 0);
+        sheet.getRangeByIndex(row, 8).numberFormat = "₹#,##0.00";
 
-        // Status (column 10) - Keep as is, status is usually from API
-        sheet.getRangeByIndex(row, 10).setText(order.status ?? '-');
+        // Status
+        sheet.getRangeByIndex(row, 9).setText(order.status ?? '-');
 
         // Alternating row color
         if (i % 2 == 1) {
-          sheet.getRangeByIndex(row, 1, row, 10).cellStyle.backColor =
+          sheet.getRangeByIndex(row, 1, row, 9).cellStyle.backColor =
               "#F2F2F2";
         }
       }
@@ -1413,15 +1411,15 @@ class OrderReportsController extends BaseController {
       final summaryRow = ordersToExport.length + 6;
 
       sheet
-          .getRangeByIndex(summaryRow, 8)
+          .getRangeByIndex(summaryRow, 7)
           .setText("${loc.total_transactions}:");
-      sheet.getRangeByIndex(summaryRow, 9).setNumber(totalTxns.toDouble());
-      sheet.getRangeByIndex(summaryRow, 9).cellStyle.bold = true;
+      sheet.getRangeByIndex(summaryRow, 8).setNumber(totalTxns.toDouble());
+      sheet.getRangeByIndex(summaryRow, 8).cellStyle.bold = true;
 
-      sheet.getRangeByIndex(summaryRow + 1, 8).setText("${loc.total_sales}:");
-      sheet.getRangeByIndex(summaryRow + 1, 9).setNumber(totalSalesVal);
-      sheet.getRangeByIndex(summaryRow + 1, 9).numberFormat = "₹#,##0.00";
-      sheet.getRangeByIndex(summaryRow + 1, 9).cellStyle
+      sheet.getRangeByIndex(summaryRow + 1, 7).setText("${loc.total_sales}:");
+      sheet.getRangeByIndex(summaryRow + 1, 8).setNumber(totalSalesVal);
+      sheet.getRangeByIndex(summaryRow + 1, 8).numberFormat = "₹#,##0.00";
+      sheet.getRangeByIndex(summaryRow + 1, 8).cellStyle
         ..bold = true
         ..backColor = "#FFEB9C";
 

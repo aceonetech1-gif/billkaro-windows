@@ -614,8 +614,10 @@ abstract class ApiClient {
     @Query('rawMaterialId') String? rawMaterialId,
     @Query('type') String? type,
     @Query('page') int? page,
-    @Query('limit') int? limit,
-  );
+    @Query('limit') int? limit, [
+    /// YYYY-MM-DD; restricts to that calendar day.
+    @Query('date') String? date,
+  ]);
 
   @POST('$outlets/{outletId}/$inventory/stock-transactions')
   Future<dynamic> createStockTransaction(

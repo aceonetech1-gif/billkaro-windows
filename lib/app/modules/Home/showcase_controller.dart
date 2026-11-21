@@ -3,19 +3,10 @@ import 'package:billkaro/config/config.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 class ShowcaseController extends BaseController {
-  final GlobalKey _outletSwitcherKey = GlobalKey();
-  final GlobalKey _profileKey = GlobalKey();
-  final GlobalKey _printerBannerKey = GlobalKey();
-  final GlobalKey _quickActionsHeaderKey = GlobalKey();
-  final GlobalKey _closedOrdersKey = GlobalKey();
-  final GlobalKey _holdOrdersKey = GlobalKey();
-  final GlobalKey _addOrderKey = GlobalKey();
-  final GlobalKey _addItemsKey = GlobalKey();
-  final GlobalKey _kotHistoryKey = GlobalKey();
-  final GlobalKey _businessOverviewKey = GlobalKey();
-  final GlobalKey _salesChartKey = GlobalKey();
-  final GlobalKey _featuresKey = GlobalKey();
-  final GlobalKey _testimonialsKey = GlobalKey();
+  // Home-screen tour keys. Each HomeScreen instance claims a fresh set so two
+  // mounted copies (e.g. during a route change) never share a GlobalKey.
+  HomeShowcaseKeys _home = HomeShowcaseKeys();
+  HomeShowcaseKeys claimHomeKeys() => _home = HomeShowcaseKeys();
   // Bottom navigation
   final GlobalKey _bottomNavHomeKey = GlobalKey();
   final GlobalKey _bottomNavItemsKey = GlobalKey();
@@ -24,19 +15,19 @@ class ShowcaseController extends BaseController {
   final GlobalKey _bottomNavMenuKey = GlobalKey();
   final GlobalKey _bottomNavMicKey = GlobalKey();
 
-  GlobalKey get outletSwitcherKey => _outletSwitcherKey;
-  GlobalKey get profileKey => _profileKey;
-  GlobalKey get printerBannerKey => _printerBannerKey;
-  GlobalKey get quickActionsHeaderKey => _quickActionsHeaderKey;
-  GlobalKey get closedOrdersKey => _closedOrdersKey;
-  GlobalKey get holdOrdersKey => _holdOrdersKey;
-  GlobalKey get addOrderKey => _addOrderKey;
-  GlobalKey get addItemsKey => _addItemsKey;
-  GlobalKey get kotHistoryKey => _kotHistoryKey;
-  GlobalKey get businessOverviewKey => _businessOverviewKey;
-  GlobalKey get salesChartKey => _salesChartKey;
-  GlobalKey get featuresKey => _featuresKey;
-  GlobalKey get testimonialsKey => _testimonialsKey;
+  GlobalKey get outletSwitcherKey => _home.outletSwitcherKey;
+  GlobalKey get profileKey => _home.profileKey;
+  GlobalKey get printerBannerKey => _home.printerBannerKey;
+  GlobalKey get quickActionsHeaderKey => _home.quickActionsHeaderKey;
+  GlobalKey get closedOrdersKey => _home.closedOrdersKey;
+  GlobalKey get holdOrdersKey => _home.holdOrdersKey;
+  GlobalKey get addOrderKey => _home.addOrderKey;
+  GlobalKey get addItemsKey => _home.addItemsKey;
+  GlobalKey get kotHistoryKey => _home.kotHistoryKey;
+  GlobalKey get businessOverviewKey => _home.businessOverviewKey;
+  GlobalKey get salesChartKey => _home.salesChartKey;
+  GlobalKey get featuresKey => _home.featuresKey;
+  GlobalKey get testimonialsKey => _home.testimonialsKey;
   GlobalKey get bottomNavHomeKey => _bottomNavHomeKey;
   GlobalKey get bottomNavItemsKey => _bottomNavItemsKey;
   GlobalKey get bottomNavCreateKey => _bottomNavCreateKey;
@@ -72,18 +63,18 @@ class ShowcaseController extends BaseController {
         try {
           final showcaseWidget = ShowCaseWidget.of(context);
           final keys = <GlobalKey>[
-            _outletSwitcherKey,
-            _profileKey,
-            _printerBannerKey,
-            _quickActionsHeaderKey,
-            _closedOrdersKey,
-            _holdOrdersKey,
-            _addItemsKey,
-            if (HomeMainRoutes.kotFeatureEnabled()) _kotHistoryKey,
-            _businessOverviewKey,
-            _salesChartKey,
-            _featuresKey,
-            _testimonialsKey,
+            _home.outletSwitcherKey,
+            _home.profileKey,
+            _home.printerBannerKey,
+            _home.quickActionsHeaderKey,
+            _home.closedOrdersKey,
+            _home.holdOrdersKey,
+            _home.addItemsKey,
+            if (HomeMainRoutes.kotFeatureEnabled()) _home.kotHistoryKey,
+            _home.businessOverviewKey,
+            _home.salesChartKey,
+            _home.featuresKey,
+            _home.testimonialsKey,
             // Bottom navigation (last)
             _bottomNavHomeKey,
             _bottomNavItemsKey,
@@ -111,3 +102,19 @@ class ShowcaseController extends BaseController {
   }
 }
 
+
+class HomeShowcaseKeys {
+  final GlobalKey outletSwitcherKey = GlobalKey();
+  final GlobalKey profileKey = GlobalKey();
+  final GlobalKey printerBannerKey = GlobalKey();
+  final GlobalKey quickActionsHeaderKey = GlobalKey();
+  final GlobalKey closedOrdersKey = GlobalKey();
+  final GlobalKey holdOrdersKey = GlobalKey();
+  final GlobalKey addOrderKey = GlobalKey();
+  final GlobalKey addItemsKey = GlobalKey();
+  final GlobalKey kotHistoryKey = GlobalKey();
+  final GlobalKey businessOverviewKey = GlobalKey();
+  final GlobalKey salesChartKey = GlobalKey();
+  final GlobalKey featuresKey = GlobalKey();
+  final GlobalKey testimonialsKey = GlobalKey();
+}

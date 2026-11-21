@@ -41,7 +41,7 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
   Future<void> _confirm(AddOrderController controller) async {
     if (_submitted) return;
     _submitted = true;
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
     await controller.executeConfirmedPosAction(widget.action);
   }
 

@@ -287,6 +287,27 @@ class NetworkModule {
                 type: DioExceptionType.badResponse,
               ),
             );
+          } else if ((response.statusCode ?? 0) >= 400) {
+            // Any other 4xx (403, 422, 429, …) is a failure — never let it
+            // reach callers as a "successful" response.
+            if (!_isErrorBeingHandled) {
+              _isErrorBeingHandled = true;
+              safelyDismissLoader();
+              final errorMessage = _messageFromData(response.data);
+              _showHttpError(
+                response.requestOptions,
+                (errorMessage != null && errorMessage.trim().isNotEmpty)
+                    ? errorMessage
+                    : 'Request failed. Please try again.',
+              );
+            }
+            return handler.reject(
+              DioException(
+                requestOptions: response.requestOptions,
+                response: response,
+                type: DioExceptionType.badResponse,
+              ),
+            );
           }
 
           // Pass other successful responses through (e.g. 201 Created)

@@ -44,12 +44,18 @@ class SidebarHeader extends StatelessWidget {
                 ),
               IconButton(
                 onPressed: onToggleCollapsed,
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E293B),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 icon: Icon(
                   collapsed
-                      ? Icons.chevron_right_rounded
-                      : Icons.chevron_left_rounded,
-                  color: SidebarColors.textInactive,
-                  size: 24,
+                      ? Icons.keyboard_double_arrow_right_rounded
+                      : Icons.keyboard_double_arrow_left_rounded,
+                  color: SidebarColors.iconInactive,
+                  size: 18,
                 ),
                 padding: const EdgeInsets.all(6),
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -100,9 +106,10 @@ class _HeaderExpanded extends StatelessWidget {
           child: Text(
             name,
             style: const TextStyle(
-              color: SidebarColors.textActive,
+              color: SidebarColors.textStrong,
               fontSize: 15,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -122,12 +129,12 @@ class _LogoPlaceholder extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColor.primary.withOpacity(0.22),
+        color: AppColor.primary,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(
+      child: const Icon(
         Icons.store_rounded,
-        color: AppColor.secondaryPrimary,
+        color: Colors.white,
         size: 22,
       ),
     );
@@ -158,7 +165,7 @@ class _CollapsedTrialCountdown extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 2,
           style: const TextStyle(
-            color: Color(0xFFFFD88A),
+            color: Color(0xFFFCD34D),
             fontSize: 10,
             fontWeight: FontWeight.w600,
             height: 1.2,

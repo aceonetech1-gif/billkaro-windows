@@ -52,23 +52,23 @@ class SidebarScrollableNav extends StatelessWidget {
     return ScrollbarTheme(
       data: ScrollbarThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.dragged)) return Colors.white;
-          if (states.contains(WidgetState.hovered)) {
-            return Colors.grey.shade300;
+          if (states.contains(WidgetState.dragged)) {
+            return const Color(0xFF64748B);
           }
-          return Colors.grey.shade400;
+          if (states.contains(WidgetState.hovered)) {
+            return const Color(0xFF475569);
+          }
+          return const Color(0xFF283548);
         }),
-        trackColor: WidgetStateProperty.all(Colors.white.withOpacity(0.16)),
-        trackBorderColor: WidgetStateProperty.all(
-          Colors.white.withOpacity(0.22),
-        ),
+        trackColor: WidgetStateProperty.all(Colors.transparent),
+        trackBorderColor: WidgetStateProperty.all(Colors.transparent),
       ),
       child: Scrollbar(
         controller: scrollController,
         thumbVisibility: true,
-        trackVisibility: true,
+        trackVisibility: false,
         interactive: true,
-        thickness: 8,
+        thickness: 5,
         radius: const Radius.circular(8),
         child: SingleChildScrollView(
           controller: scrollController,

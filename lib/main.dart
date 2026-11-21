@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
 import 'package:billkaro/app/modules/Language/language_controller.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
@@ -54,7 +53,8 @@ void main(List<String> args) async {
     if (kDebugMode) {
       FlutterError.presentError(details);
     }
-    debugPrint('❌ [FLUTTER ERROR] ${details.exception}');
+    // Full details include "The relevant error-causing widget was: …file:line".
+    debugPrint('❌ [FLUTTER ERROR] ${details.toString()}');
     debugPrint('❌ [STACK TRACE] ${details.stack}');
   };
 

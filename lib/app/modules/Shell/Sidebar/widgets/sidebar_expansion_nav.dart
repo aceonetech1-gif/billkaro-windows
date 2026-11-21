@@ -27,11 +27,11 @@ class SidebarExpansionNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? activeBackground : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -39,14 +39,20 @@ class SidebarExpansionNav extends StatelessWidget {
             key: PageStorageKey<String>(storageKey),
             initiallyExpanded: initiallyExpanded,
             onExpansionChanged: onExpansionChanged,
-            tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            collapsedShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
             childrenPadding: const EdgeInsets.only(
-              left: 46,
-              right: 10,
+              left: 21,
+              right: 0,
               bottom: 6,
             ),
-            iconColor: SidebarColors.textInactive,
-            collapsedIconColor: SidebarColors.textInactive,
+            iconColor: SidebarColors.textStrong,
+            collapsedIconColor: SidebarColors.iconInactive,
             leading: SizedBox(
               width: 24,
               height: 24,
@@ -63,7 +69,17 @@ class SidebarExpansionNav extends StatelessWidget {
                 letterSpacing: 0.1,
               ),
             ),
-            children: children,
+            children: [
+              Container(
+                padding: const EdgeInsets.only(left: 12),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: SidebarColors.border, width: 1.5),
+                  ),
+                ),
+                child: Column(children: children),
+              ),
+            ],
           ),
         ),
       ),

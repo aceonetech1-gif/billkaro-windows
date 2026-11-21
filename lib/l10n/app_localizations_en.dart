@@ -2215,6 +2215,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show Add Details for customer, table, discount, and payment';
 
   @override
+  String get auto_whatsapp_on_create_order => 'Auto WhatsApp on create order';
+
+  @override
+  String get auto_whatsapp_on_create_order_subtitle =>
+      'Send order details to customer on WhatsApp after creating an order';
+
+  @override
   String get kitchen_display_in_browser => 'Kitchen Display in browser';
 
   @override

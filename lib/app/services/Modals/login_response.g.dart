@@ -47,7 +47,7 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
       ?.map((e) => e as String)
       .toList(),
   userId: json['userId'] as String?,
-  customerCode: _readCustomerCode(json, 'customerCode'),
+  customerCode: _readCustomerCode(json, 'customerCode') as String?,
   userName: json['userName'] as String?,
   uniqueId: json['uniqueId'] as String?,
   district: json['district'] as String?,

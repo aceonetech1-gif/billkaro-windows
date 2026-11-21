@@ -511,6 +511,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           value: controller.showAddDetailsOnCreateOrder,
           onChanged: controller.setShowAddDetailsOnCreateOrder,
         ),
+        _buildSwitchTile(
+          icon: Icons.chat_outlined,
+          title: loc.auto_whatsapp_on_create_order,
+          subtitle: loc.auto_whatsapp_on_create_order_subtitle,
+          value: controller.autoWhatsAppOnCreateOrder,
+          onChanged: controller.setAutoWhatsAppOnCreateOrder,
+        ),
         _buildActionOrNavTile(
           icon: Icons.local_offer_outlined,
           title: loc.settings_offers_promotions,

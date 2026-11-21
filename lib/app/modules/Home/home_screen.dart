@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:billkaro/app/Widgets/notification_bell_button.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/InternetSpeed/widgets/internet_speed_appbar_button.dart';
@@ -7,6 +6,7 @@ import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/Home/Widgets/outlet_switcher.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
+import 'package:billkaro/app/modules/Home/Widgets/dashboard_hero.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Expenses/add_expense_dialog.dart';
 import 'package:billkaro/app/modules/Expenses/expenses_controller.dart';
@@ -34,47 +34,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final HomeScreenController controller = Get.find<HomeScreenController>();
   final showcaseController = Get.put(ShowcaseController());
-  final PageController _pageController = PageController();
-  final RxInt _currentPage = 0.obs;
+  late final HomeShowcaseKeys _showcaseKeys = showcaseController.claimHomeKeys();
   final ScrollController _scrollController = ScrollController();
-  Timer? _autoScrollTimer;
   Timer? _occupiedTickTimer;
 
   static const double _pageHMargin = 16;
   static const double _sectionGap = 18;
   static const double _cardRadius = 16;
 
-  static const int _testimonialCount = 3;
-
   @override
   void initState() {
     super.initState();
-    _startAutoScroll();
     _startOccupiedTick();
     // WidgetsBinding.instance.addPostFrameCallback((_) {
     //   checkDeveloperOptionsAndShowSheet();
     // });
-  }
-
-  void _startAutoScroll() {
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      int nextPage = _currentPage.value + 1;
-      if (nextPage >= _testimonialCount) nextPage = 0;
-      _pageController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-      _currentPage.value = nextPage;
-    });
-  }
-
-  List<Map<String, String>> _testimonials(AppLocalizations loc) {
-    return [
-      {'quote': loc.testimonial_quote_1, 'author': loc.testimonial_author_1},
-      {'quote': loc.testimonial_quote_2, 'author': loc.testimonial_author_2},
-      {'quote': loc.testimonial_quote_3, 'author': loc.testimonial_author_3},
-    ];
   }
 
   void _startOccupiedTick() {
@@ -86,9 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _autoScrollTimer?.cancel();
     _occupiedTickTimer?.cancel();
-    _pageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -103,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         elevation: 0,
         leading: Showcase(
-          key: showcaseController.outletSwitcherKey,
+          key: _showcaseKeys.outletSwitcherKey,
           title: loc.home_outlet_showcase_title,
           description: loc.home_outlet_showcase_desc,
           titleTextStyle: const TextStyle(
@@ -155,36 +127,102 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (isDesktop) ...[
+                      if (StaffAccess.canViewDashboardInsights)
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: _pageHMargin,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Obx(
+                            () => DashboardHero(
+                              businessName:
+                                  controller
+                                      .selectedOutlet
+                                      .value
+                                      ?.businessName ??
+                                  '',
+                              todaySales: controller.todaySales.value,
+                              yesterdaySales: controller.yesterdaySales.value,
+                              todayOrders: controller.todayOrders.value,
+                              yesterdayOrders: controller.yesterdayOrders.value,
+                              newOrderLabel: loc.create_order,
+                              onNewOrder: StaffAccess.canShowCreateOrder
+                                  ? () => Modular.to.navigate(
+                                      HomeMainRoutes.createOrder,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _pageHMargin,
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                loc.dashboard,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.grey[900],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      loc.dashboard,
+                                      style: TextStyle(
+                                        fontSize: isDesktop ? 24 : 21,
+                                        height: 1.15,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.3,
+                                        color: Colors.grey[900],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      loc.dashboardOverviewSubtitle,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                loc.dashboardOverviewSubtitle,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today_rounded,
+                                      size: 13,
+                                      color: AppColor.primary,
+                                    ),
+                                    const SizedBox(width: 7),
+                                    Text(
+                                      'TODAY',
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: _sectionGap),
-                      ],
+                      const SizedBox(height: _sectionGap),
                       const StoreClosedBanner(),
                       _printerStatusBanner(loc),
                       const SizedBox(height: _sectionGap),
@@ -192,50 +230,31 @@ class _HomeScreenState extends State<HomeScreen> {
                         _occupiedTablesSection(loc: loc, isDesktop: isDesktop),
                         const SizedBox(height: _sectionGap),
                       ],
-                      Obx(() {
-                        controller.inventoryEnabled.value;
-                        if (!StaffAccess.canViewInventory) {
-                          return const SizedBox.shrink();
-                        }
-                        return _lowStockSection(loc);
-                      }),
-                      _quickActions(loc, isDesktop: isDesktop),
-                      if (StaffAccess.canViewDashboardInsights) ...[
-                        const SizedBox(height: _sectionGap),
-                        if (isDesktop)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: _pageHMargin,
+                      if (isDesktop)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _mainColumn(loc, isDesktop),
+                              ),
                             ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 12),
-                                    child: _businessOverview(loc),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(child: PaymentSummaryWidget()),
-                              ],
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _sideColumn(loc),
+                              ),
                             ),
-                          )
-                        else ...[
-                          _businessOverview(loc),
-                          const SizedBox(height: _sectionGap),
-                          const PaymentSummaryWidget(),
-                        ],
-                        const SizedBox(height: _sectionGap),
-                        _weeklySalesChart(loc),
+                          ],
+                        )
+                      else ...[
+                        ..._sideColumn(loc).take(1),
+                        ..._mainColumn(loc, isDesktop),
+                        ..._sideColumn(loc).skip(1),
                       ],
-                      const SizedBox(height: _sectionGap),
-                      if (StaffAccess.canViewProducts) ...[
-                        _topSellingItemsSection(loc),
-                        const SizedBox(height: _sectionGap),
-                      ],
-                      _featuresSection(loc),
-                      _testimonialsCarousel(loc),
                       const SizedBox(height: 22),
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -342,13 +361,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  List<Widget> _mainColumn(AppLocalizations loc, bool isDesktop) {
+    return [
+      _quickActions(loc, isDesktop: isDesktop),
+      if (StaffAccess.canViewDashboardInsights) ...[
+        const SizedBox(height: _sectionGap),
+        _weeklySalesChart(loc),
+      ],
+      if (StaffAccess.canViewProducts) ...[
+        const SizedBox(height: _sectionGap),
+        _topSellingItemsSection(loc),
+      ],
+      const SizedBox(height: _sectionGap),
+    ];
+  }
+
+  List<Widget> _sideColumn(AppLocalizations loc) {
+    return [
+      Obx(() {
+        controller.inventoryEnabled.value;
+        if (!StaffAccess.canViewInventory) return const SizedBox.shrink();
+        return _lowStockSection(loc);
+      }),
+      if (StaffAccess.canViewDashboardInsights) ...[
+        _businessOverview(loc),
+        const SizedBox(height: _sectionGap),
+        const PaymentSummaryWidget(),
+        const SizedBox(height: _sectionGap),
+      ],
+    ];
+  }
+
   Widget _headerAvatarAction(AppLocalizations loc) {
     return Obx(() {
       final selectedOutlet = controller.selectedOutlet.value;
 
       if (selectedOutlet == null) {
         return Showcase(
-          key: showcaseController.profileKey,
+          key: _showcaseKeys.profileKey,
           title: loc.home_profile_business_title,
           description: loc.home_profile_business_desc,
           titleTextStyle: const TextStyle(
@@ -370,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       return Showcase(
-        key: showcaseController.profileKey,
+        key: _showcaseKeys.profileKey,
         title: loc.home_profile_business_title,
         description: loc.home_profile_business_desc_short,
         titleTextStyle: const TextStyle(
@@ -388,7 +438,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: (selectedOutlet.logo?.isNotEmpty ?? false)
               ? CircleAvatar(
                   radius: 18,
-                  backgroundImage: NetworkImage(resolvedMediaUrl(selectedOutlet.logo!)),
+                  backgroundImage: NetworkImage(
+                    resolvedMediaUrl(selectedOutlet.logo!),
+                  ),
                   backgroundColor: Colors.white,
                 )
               : Container(
@@ -433,9 +485,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black87,
+                    fontSize: 16,
+                    color: Colors.grey[900],
                     fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                     height: 1.2,
                   ),
                 ),
@@ -639,14 +692,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _cardShell({required Widget child, EdgeInsetsGeometry? padding}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.78),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(_cardRadius),
-        border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -691,7 +744,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
         child: Showcase(
-          key: showcaseController.printerBannerKey,
+          key: _showcaseKeys.printerBannerKey,
           title: loc.home_printer_status_title,
           description: loc.home_printer_status_desc,
           titleTextStyle: const TextStyle(
@@ -773,7 +826,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Showcase(
-          key: showcaseController.quickActionsHeaderKey,
+          key: _showcaseKeys.quickActionsHeaderKey,
           title: loc.quickActions,
           description: loc.home_quick_actions_showcase_desc,
           titleTextStyle: const TextStyle(
@@ -815,12 +868,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: isDesktop
                             ? 5
-                            : (Get.width >= 480 ? 4 : 2),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isDesktop
-                            ? 1.4
-                            : (Get.width >= 480 ? 1.2 : 1.6),
+                            : (Get.width >= 480 ? 4 : 3),
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        mainAxisExtent: 118,
                       ),
                       itemBuilder: (_, __) => Container(
                         decoration: BoxDecoration(
@@ -892,15 +943,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 {
                   'icon': Icons.inventory_2_outlined,
                   'label': loc.inventory,
-                  'onTap': () =>
-                      Modular.to.pushNamed(HomeMainRoutes.inventory),
+                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.inventory),
                 },
               if (StaffAccess.canAccessCustomers)
                 {
                   'icon': Icons.people_outline,
                   'label': loc.customers,
-                  'onTap': () =>
-                      Modular.to.pushNamed(HomeMainRoutes.customers),
+                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.customers),
                 },
               if (StaffAccess.canManageStaff)
                 {
@@ -934,7 +983,8 @@ class _HomeScreenState extends State<HomeScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (StaffAccess.canShowCreateOrder) ...[
+                if (StaffAccess.canShowCreateOrder &&
+                    !StaffAccess.canViewDashboardInsights) ...[
                   _createOrderQuickAction(loc),
                   const SizedBox(height: 12),
                 ],
@@ -943,12 +993,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: actions.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: isDesktop ? 5 : (Get.width >= 480 ? 4 : 2),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: isDesktop
-                        ? 1.4
-                        : (Get.width >= 480 ? 1.2 : 1.6),
+                    crossAxisCount: isDesktop ? 5 : (Get.width >= 480 ? 4 : 3),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: 118,
                   ),
                   itemBuilder: (context, index) {
                     final item = actions[index];
@@ -958,16 +1006,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Assign showcase keys based on label
                     if (label == loc.closedOrders) {
-                      showcaseKey = showcaseController.closedOrdersKey;
+                      showcaseKey = _showcaseKeys.closedOrdersKey;
                       showcaseDescription = loc.home_showcase_closed_orders;
                     } else if (label == loc.onHoldOrders) {
-                      showcaseKey = showcaseController.holdOrdersKey;
+                      showcaseKey = _showcaseKeys.holdOrdersKey;
                       showcaseDescription = loc.home_showcase_hold_orders;
                     } else if (label == loc.addItems) {
-                      showcaseKey = showcaseController.addItemsKey;
+                      showcaseKey = _showcaseKeys.addItemsKey;
                       showcaseDescription = loc.home_showcase_add_items;
                     } else if (label == loc.kot_history) {
-                      showcaseKey = showcaseController.kotHistoryKey;
+                      showcaseKey = _showcaseKeys.kotHistoryKey;
                       showcaseDescription = loc.home_showcase_kot_history;
                     }
 
@@ -1261,10 +1309,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(_cardRadius),
               border: Border(
-                left: BorderSide(
-                  color: AppColor.secondaryPrimary,
-                  width: 4,
-                ),
+                left: BorderSide(color: AppColor.secondaryPrimary, width: 4),
               ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1323,22 +1368,18 @@ class _HomeScreenState extends State<HomeScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(_cardRadius),
           onTap: onTap,
+          hoverColor: AppColor.primary.withOpacity(0.04),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColor.primary.withOpacity(0.22),
-                        AppColor.secondaryPrimary.withOpacity(0.14),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.25)),
+                    color: AppColor.primary.withOpacity(0.08),
+                    shape: BoxShape.circle,
                   ),
                   child: Center(
                     child:
@@ -1346,25 +1387,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         Icon(icon, color: AppColor.primary, size: 22),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(height: 10),
+                Flexible(
                   child: Text(
                     label,
                     maxLines: 2,
+                    textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: TextStyle(
+                      fontSize: 12.5,
                       height: 1.2,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w800,
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: Colors.grey[500],
                 ),
               ],
             ),
@@ -1443,7 +1479,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
           child: Showcase(
-            key: showcaseController.businessOverviewKey,
+            key: _showcaseKeys.businessOverviewKey,
             description: loc.home_business_overview_showcase_desc,
             title: loc.businessOverview,
             titleTextStyle: const TextStyle(
@@ -1512,16 +1548,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColor.primary.withOpacity(0.20),
-                                  AppColor.secondaryPrimary.withOpacity(0.12),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.25),
-                              ),
+                              color: AppColor.primary.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.insights,
@@ -1689,9 +1717,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1770,7 +1798,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           return Showcase(
-            key: showcaseController.salesChartKey,
+            key: _showcaseKeys.salesChartKey,
             title: loc.home_sales_trend,
             description: loc.home_sales_trend_showcase_desc,
             titleTextStyle: const TextStyle(
@@ -1902,8 +1930,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final labels = controller.chartLabels;
               final maxX = data.length > 0 ? (data.length - 1).toDouble() : 6.0;
               // Avoid crowded / duplicate x-axis labels on dense periods (e.g. 12 months).
-              final bottomLabelInterval =
-                  labels.length > 7 ? 2.0 : 1.0;
+              final bottomLabelInterval = labels.length > 7 ? 2.0 : 1.0;
 
               return AnimatedSwitcher(
                 duration: const Duration(milliseconds: 450),
@@ -2461,9 +2488,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: content,
     );
@@ -2624,8 +2651,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     fit: BoxFit.cover,
                                     memCacheWidth: 80,
                                     memCacheHeight: 80,
-                                    fadeInDuration:
-                                        const Duration(milliseconds: 150),
+                                    fadeInDuration: const Duration(
+                                      milliseconds: 150,
+                                    ),
                                     placeholder: (_, __) => _itemPlaceholder(),
                                     errorWidget: (_, __, ___) =>
                                         _itemPlaceholder(),
@@ -2723,393 +2751,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _featuresSection(AppLocalizations loc) {
-    return Obx(() {
-      // Always read Rx first — staff without print/settings short-circuit && and
-      // would leave Obx with no observables (GetX improper-use error).
-      final isKotEnabled = controller.isKOT.value;
-      final showAddStaff = StaffAccess.canCreateStaff;
-      final showPrintKot =
-          StaffAccess.canPrintKot &&
-          StaffAccess.canManageSettings &&
-          HomeMainRoutes.outletIsCafeOrRestaurant() &&
-          !isKotEnabled;
-      if (!showAddStaff && !showPrintKot) {
-        return const SizedBox.shrink();
-      }
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Showcase(
-            key: showcaseController.featuresKey,
-            title: loc.featuresForYou,
-            description: loc.home_features_showcase_desc,
-            titleTextStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            descTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
-            overlayColor: Colors.black54,
-            overlayOpacity: 0.7,
-            tooltipBackgroundColor: AppColor.primary,
-            textColor: Colors.white,
-            child: _sectionHeader(
-              loc.featuresForYou,
-              subtitle: loc.home_recommended_setup_tools,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 700;
-                final tiles = <Widget>[
-                  if (showAddStaff)
-                    _buildFeatureListTile(
-                      title: loc.addStaffSecurely_title,
-                      description: loc.addStaffSecurely_desc,
-                      icon: Icons.people_outline,
-                      onTap: () => Modular.to.navigate(HomeMainRoutes.staff),
-                    ),
-                  if (showPrintKot)
-                    _buildFeatureListTile(
-                      title: loc.printKOT_title,
-                      description: loc.printKOT_desc,
-                      icon: Icons.print_outlined,
-                      onTap: () {
-                        controller.setKotMode(true);
-                      },
-                      badgeText: loc.badge_new,
-                    ),
-                ];
-
-                if (isWide && tiles.length > 1) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var i = 0; i < tiles.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 12),
-                        Expanded(child: tiles[i]),
-                      ],
-                    ],
-                  );
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < tiles.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 12),
-                      tiles[i],
-                    ],
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 22),
-        ],
-      );
-    });
-  }
-
-  Widget _buildFeatureListTile({
-    required String title,
-    required String description,
-    required IconData icon,
-    required VoidCallback onTap,
-    String? badgeText,
-  }) {
-    return _GlassContainer(
-      padding: const EdgeInsets.all(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(_cardRadius),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColor.primary.withOpacity(0.18),
-                    AppColor.secondaryPrimary.withOpacity(0.12),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.25)),
-              ),
-              child: Icon(icon, color: AppColor.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      if (badgeText != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: Colors.orange.withOpacity(0.18),
-                            ),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.35,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[500]),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _testimonialsCarousel(AppLocalizations loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Showcase(
-          key: showcaseController.testimonialsKey,
-          title: loc.home_testimonials,
-          description: loc.home_testimonials_showcase_desc,
-          titleTextStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          descTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
-          overlayColor: Colors.black54,
-          overlayOpacity: 0.7,
-          tooltipBackgroundColor: AppColor.primary,
-          textColor: Colors.white,
-          child: _sectionHeader(
-            loc.what_our_users_say,
-            subtitle: loc.what_our_users_say_subtitle,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
-          child: _GlassContainer(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.format_quote,
-                            size: 18,
-                            color: AppColor.secondaryPrimary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            loc.home_testimonials,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColor.primary.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: AppColor.primary.withOpacity(0.12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star, size: 14, color: Colors.amber[700]),
-                          const SizedBox(width: 4),
-                          Text(
-                            '5.0',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.grey[800],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 132,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: _testimonials(loc).length,
-                    onPageChanged: (index) => _currentPage.value = index,
-                    itemBuilder: (context, index) {
-                      final testimonial = _testimonials(loc)[index];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              testimonial['quote']!,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontStyle: FontStyle.italic,
-                                color: Colors.black87,
-                                height: 1.55,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColor.primary,
-                                      AppColor.secondaryPrimary,
-                                    ],
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    testimonial['author']![0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  testimonial['author']!,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              ...List.generate(
-                                5,
-                                (i) => Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: Colors.amber[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Obx(
-                  () => Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _testimonials(loc).length,
-                      (index) => GestureDetector(
-                        onTap: () {
-                          _pageController.animateToPage(
-                            index,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 260),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: _currentPage.value == index ? 24 : 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            color: _currentPage.value == index
-                                ? AppColor.secondaryPrimary
-                                : Colors.grey[300],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _homeShimmer({required Widget child}) {
     return Shimmer.fromColors(
       baseColor: Colors.grey.shade300,
@@ -3127,30 +2768,22 @@ class _GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: child,
-        ),
+        ],
       ),
+      child: child,
     );
   }
 }

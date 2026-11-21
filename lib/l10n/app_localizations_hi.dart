@@ -2219,6 +2219,13 @@ class AppLocalizationsHi extends AppLocalizations {
       'ग्राहक, टेबल, छूट और भुगतान के लिए विवरण जोड़ें दिखाएं';
 
   @override
+  String get auto_whatsapp_on_create_order => 'ऑर्डर बनाने पर ऑटो व्हाट्सएप';
+
+  @override
+  String get auto_whatsapp_on_create_order_subtitle =>
+      'ऑर्डर बनाने के बाद ग्राहक को व्हाट्सएप पर ऑर्डर विवरण भेजें';
+
+  @override
   String get kitchen_display_in_browser => 'ब्राउज़र में किचन डिस्प्ले';
 
   @override

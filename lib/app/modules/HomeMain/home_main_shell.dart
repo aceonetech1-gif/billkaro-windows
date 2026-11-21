@@ -98,7 +98,7 @@ class _HomeMainShellState extends State<HomeMainShell> {
                             child: VerticalDivider(
                               width: 1,
                               thickness: 1,
-                              color: Color(0xFF3D4558),
+                              color: Color(0xFF1E293B),
                             ),
                           ),
                         ],

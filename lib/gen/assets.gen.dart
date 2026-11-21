@@ -200,6 +200,7 @@ class Assets {
   static const AssetGenImage plan = AssetGenImage('assets/plan.png');
   static const AssetGenImage printer = AssetGenImage('assets/printer.png');
   static const $AssetsSvgGen svg = $AssetsSvgGen();
+  static const String shorebird = 'shorebird.yaml';
 
   /// List of all assets
   static List<dynamic> get values => [
@@ -211,6 +212,7 @@ class Assets {
     pdf,
     plan,
     printer,
+    shorebird,
   ];
 }
 

@@ -277,6 +277,17 @@ class InventoryController extends BaseController {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Builder(
               builder: (dialogContext) {
+                Future<void> submit() => _submitQuickAddCategory(
+                  dialogContext: dialogContext,
+                  formKey: formKey,
+                  nameController: nameController,
+                  isSaving: isSaving,
+                );
+
+                // Pop only this dialog (Get.back can close a toast or the
+                // Filters dialog underneath instead).
+                void close() => Navigator.of(dialogContext).pop();
+
                 return Padding(
                   padding: EdgeInsets.only(
                     bottom: MediaQuery.viewInsetsOf(dialogContext).bottom,
@@ -315,7 +326,7 @@ class InventoryController extends BaseController {
                               ),
                               IconButton(
                                 tooltip: loc.cancel,
-                                onPressed: () => Get.back(),
+                                onPressed: isSaving.value ? null : close,
                                 icon: const Icon(Icons.close),
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -371,11 +382,7 @@ class InventoryController extends BaseController {
                             },
                             onFieldSubmitted: (_) async {
                               if (isSaving.value) return;
-                              await _submitQuickAddCategory(
-                                formKey: formKey,
-                                nameController: nameController,
-                                isSaving: isSaving,
-                              );
+                              await submit();
                             },
                           ),
                         ),
@@ -386,9 +393,7 @@ class InventoryController extends BaseController {
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: isSaving.value
-                                        ? null
-                                        : () => Get.back(),
+                                    onPressed: isSaving.value ? null : close,
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.grey[700],
                                       side: BorderSide(
@@ -409,11 +414,7 @@ class InventoryController extends BaseController {
                                   child: ElevatedButton(
                                     onPressed: isSaving.value
                                         ? null
-                                        : () => _submitQuickAddCategory(
-                                            formKey: formKey,
-                                            nameController: nameController,
-                                            isSaving: isSaving,
-                                          ),
+                                        : () => submit(),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColor.primary,
                                       foregroundColor: Colors.white,
@@ -453,11 +454,13 @@ class InventoryController extends BaseController {
         barrierDismissible: false,
       );
     } finally {
-      nameController.dispose();
+      // Delay dispose until after the route pop animation.
+      Future.delayed(const Duration(milliseconds: 300), nameController.dispose);
     }
   }
 
   Future<void> _submitQuickAddCategory({
+    required BuildContext dialogContext,
     required GlobalKey<FormState> formKey,
     required TextEditingController nameController,
     required RxBool isSaving,
@@ -467,36 +470,67 @@ class InventoryController extends BaseController {
 
     isSaving.value = true;
     try {
-      final created = await createCategoryQuick(nameController.text);
-      if (created != null) {
+      final created = await createCategoryQuick(
+        nameController.text,
+        refreshAndToast: false,
+      );
+      if (created == null) {
+        isSaving.value = false;
+        return;
+      }
+
+      // Close Add Category only — keep Filters dialog open.
+      if (dialogContext.mounted) {
+        Navigator.of(dialogContext).pop(created);
+      } else if (Get.isDialogOpen ?? false) {
         Get.back(result: created);
       }
-    } finally {
+
+      await loadRawMaterialCategories();
+      final loc = AppLocalizations.of(Get.context!)!;
+      showSuccess(description: loc.category_added_successfully);
+    } catch (_) {
       isSaving.value = false;
     }
   }
 
-  /// Creates a category via API (or returns existing match), then refreshes lists.
-  Future<String?> createCategoryQuick(String rawName) async {
-    final ok = await _ensureRawMaterialCategory(rawName, silent: false);
+  /// Creates a category via API (or returns existing match).
+  ///
+  /// When [refreshAndToast] is false, caller should refresh + show success
+  /// after closing any nested dialog (avoids GetX overlay / rebuild bugs).
+  Future<String?> createCategoryQuick(
+    String rawName, {
+    bool refreshAndToast = true,
+  }) async {
+    final ok = await _ensureRawMaterialCategory(
+      rawName,
+      silent: !refreshAndToast,
+      reportErrors: true,
+    );
     if (!ok) return null;
+
+    if (refreshAndToast) {
+      await loadRawMaterialCategories();
+    }
+
     final normalized = rawName.trim().toLowerCase();
     return rawMaterialCategoryItems
             .firstWhereOrNull(
               (c) => c.categoryName.trim().toLowerCase() == normalized,
             )
             ?.categoryName ??
-        normalized;
+        rawName.trim();
   }
 
   /// Ensures [rawName] exists in raw_material_categories. Returns false on failure.
   Future<bool> _ensureRawMaterialCategory(
     String rawName, {
     required bool silent,
+    bool reportErrors = false,
   }) async {
     final name = rawName.trim();
     if (name.isEmpty || name.toLowerCase() == 'none') {
-      if (!silent) {
+      if (!silent || reportErrors) {
         final loc = AppLocalizations.of(Get.context!)!;
         showError(description: loc.category_name_cannot_be_empty);
       }
@@ -515,13 +549,14 @@ class InventoryController extends BaseController {
       apiClient.addRawMaterialCategory(outletId, {
         'userId': userId,
         'outletId': outletId,
-        'categoryName': normalized,
+        // Keep the user's casing; duplicates are detected case-insensitively.
+        'categoryName': name,
       }),
       showLoader: false,
     );
 
     if (response == null || response['status'] != 'success') {
-      if (silent) {
+      if (silent && !reportErrors) {
         // Unique/duplicate races are fine; other failures stay silent.
         final msg =
             (response is Map ? response['message'] : null)
@@ -690,7 +725,7 @@ class InventoryController extends BaseController {
   Future<void> setRawMaterialDateFilter(DateTime? date) async {
     rawMaterialDateFilter.value = date == null ? null : _calendarDay(date);
     if (date != null) {
-      await loadTransactions(limit: 500);
+      await loadTransactionsForDay(date);
     }
   }
 
@@ -805,7 +840,11 @@ class InventoryController extends BaseController {
     supplierDateFilter.value = null;
   }
 
-  Future<void> loadTransactions({int limit = 50}) async {
+  /// Default matches the initial [loadAll] page size so post-action refreshes
+  /// don't shrink the stock log (and break its date filters).
+  static const int transactionPageSize = 500;
+
+  Future<void> loadTransactions({int limit = transactionPageSize}) async {
     final res = await callApi(
       apiClient.getStockTransactions(outletId, null, null, 1, limit),
       showLoader: false,
@@ -817,6 +856,31 @@ class InventoryController extends BaseController {
           )
           .toList();
     }
+    // Keep an active past-day filter populated after a refresh.
+    final day = stockLogDateFilter.value ?? rawMaterialDateFilter.value;
+    if (day != null) await loadTransactionsForDay(day);
+  }
+
+  /// Fetches every movement of [day] and merges it into [transactions], so
+  /// date filters work for days older than the latest page.
+  Future<void> loadTransactionsForDay(DateTime day) async {
+    final date =
+        '${day.year.toString().padLeft(4, '0')}-'
+        '${day.month.toString().padLeft(2, '0')}-'
+        '${day.day.toString().padLeft(2, '0')}';
+    final res = await callApi(
+      apiClient.getStockTransactions(outletId, null, null, 1, 1000, date),
+      showLoader: false,
+    );
+    if (res is! Map || res['data'] is! List) return;
+    final byId = {for (final t in transactions) t.id: t};
+    for (final e in res['data'] as List) {
+      final t = StockTransactionData.fromJson(Map<String, dynamic>.from(e));
+      byId[t.id] = t;
+    }
+    final merged = byId.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    transactions.value = merged;
   }
 
   static bool isStockInType(String type) {
@@ -910,6 +974,7 @@ class InventoryController extends BaseController {
 
   void setStockLogDateFilter(DateTime? date) {
     stockLogDateFilter.value = date == null ? null : _calendarDay(date);
+    if (date != null) unawaited(loadTransactionsForDay(date));
   }
 
   void clearStockLogFilters() {
@@ -981,9 +1046,11 @@ class InventoryController extends BaseController {
           .where((i) => i.status == 'Low Stock' || i.status == 'Out of Stock')
           .toList();
     }
-    final cat = productStockCategoryFilter.value.trim();
+    final cat = productStockCategoryFilter.value.trim().toLowerCase();
     if (cat.isNotEmpty) {
-      items = items.where((i) => i.category.trim() == cat).toList();
+      items = items
+          .where((i) => i.category.trim().toLowerCase() == cat)
+          .toList();
     }
     final selectedIds = productStockItemIdFilter;
     if (selectedIds.isNotEmpty) {
@@ -1231,11 +1298,17 @@ class InventoryController extends BaseController {
     if (res == null) return false;
 
     if (desiredStock != null) {
-      final previousStock =
-          rawMaterials.firstWhereOrNull((m) => m.id == id)?.currentStock ??
-          (res is Map && res['data'] is Map
-              ? (res['data']['currentStock'] as num?)?.toDouble()
-              : null);
+      // Use the server's stock (PATCH returns the fresh row), not the cached
+      // list: sales since the list loaded would otherwise skew the diff.
+      var previousStock = res is Map && res['data'] is Map
+          ? (res['data']['currentStock'] as num?)?.toDouble()
+          : null;
+      if (previousStock == null) {
+        await loadRawMaterials();
+        previousStock = rawMaterials
+            .firstWhereOrNull((m) => m.id == id)
+            ?.currentStock;
+      }
 
       if (previousStock != null) {
         final diff = desiredStock - previousStock;
@@ -1256,6 +1329,10 @@ class InventoryController extends BaseController {
               loadRawMaterialCategories(),
               loadDashboard(),
             ]);
+            showError(
+              description:
+                  'Material details were saved, but the stock quantity could not be updated.',
+            );
             return false;
           }
         }
@@ -1275,8 +1352,8 @@ class InventoryController extends BaseController {
     if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     final res = await callApi(apiClient.deleteRawMaterial(outletId, id));
     if (res != null) {
-      await loadRawMaterials();
-      await loadDashboard();
+      // Backend also removes recipe lines that used this material.
+      await Future.wait([loadRawMaterials(), loadRecipes(), loadDashboard()]);
       return true;
     }
     return false;
@@ -1372,177 +1449,119 @@ class InventoryController extends BaseController {
     return true;
   }
 
-  Future<bool> createRecipe({
-    required String itemId,
-    required String rawMaterialId,
-    required double quantity,
-  }) async {
-    final res = await callApi(
-      apiClient.createRecipe(outletId, {
-        'userId': userId,
-        'outletId': outletId,
-        'itemId': itemId,
-        'rawMaterialId': rawMaterialId,
-        'quantity': quantity,
-      }),
-    );
-    if (res != null) {
-      await Future.wait([
-        loadRecipes(),
-        loadRawMaterials(),
-        loadTransactions(),
-        loadDashboard(),
-      ]);
-      return true;
-    }
-    return false;
-  }
-
-  /// Creates multiple recipe lines for one menu item (e.g. sandwich ingredients).
-  Future<bool> createRecipesBatch({
-    required String itemId,
-    required List<MapEntry<String, double>> ingredients,
-  }) async {
-    if (ingredients.isEmpty) return false;
-
-    var successCount = 0;
-    for (var i = 0; i < ingredients.length; i++) {
-      final entry = ingredients[i];
-      final res = await callApi(
-        apiClient.createRecipe(outletId, {
-          'userId': userId,
-          'outletId': outletId,
-          'itemId': itemId,
-          'rawMaterialId': entry.key,
-          'quantity': entry.value,
-        }),
-        showLoader: i == 0,
-      );
-      if (res != null) successCount++;
-    }
-
-    if (successCount > 0) {
-      await Future.wait([
-        loadRecipes(),
-        loadRawMaterials(),
-        loadTransactions(),
-        loadDashboard(),
-      ]);
-    }
-    return successCount == ingredients.length;
+  /// Recipe CRUD never changes stock (deduction happens on sale), so only
+  /// recipes and the dashboard counters need refreshing afterwards.
+  Future<void> _refreshAfterRecipeChange() async {
+    await Future.wait([loadRecipes(), loadDashboard()]);
   }
 
   /// Creates, updates, and deletes recipe lines to match the submitted list.
-  /// Incoming lines without an id are matched to existing rows by rawMaterialId
-  /// so linking/copying a recipe does not hit unique-constraint conflicts.
+  ///
+  /// Matching: an incoming line reuses the existing row for the same
+  /// raw material first, then its own id. Removed rows are deleted *before*
+  /// any update/create so the (item, rawMaterial) unique constraint never
+  /// trips when a material moves between rows.
   Future<bool> saveRecipesForItem({
     required String itemId,
     required List<RecipeLineInput> ingredients,
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     if (ingredients.isEmpty) return false;
 
     final existing = recipesForItem(itemId);
     final existingById = {for (final r in existing) r.id: r};
     final existingByMaterial = {for (final r in existing) r.rawMaterialId: r};
-    final keptIds = <String>{};
+
+    // Drop duplicate materials (first one wins) — they would conflict anyway.
+    final seenMaterials = <String>{};
+    final lines = <RecipeLineInput>[];
+    for (final ing in ingredients) {
+      if (seenMaterials.add(ing.rawMaterialId)) lines.add(ing);
+    }
+
+    final claimed = <String>{};
+    final updates = <MapEntry<String, RecipeLineInput>>[];
+    final creates = <RecipeLineInput>[];
+    final pending = <RecipeLineInput>[];
+
+    // Pass 1: same material → same row.
+    for (final ing in lines) {
+      final row = existingByMaterial[ing.rawMaterialId];
+      if (row != null && claimed.add(row.id)) {
+        updates.add(MapEntry(row.id, ing));
+      } else {
+        pending.add(ing);
+      }
+    }
+    // Pass 2: material changed on an existing row (matched by id), else new.
+    for (final ing in pending) {
+      final id = (ing.id ?? '').trim();
+      if (id.isNotEmpty && existingById.containsKey(id) && claimed.add(id)) {
+        updates.add(MapEntry(id, ing));
+      } else {
+        creates.add(ing);
+      }
+    }
 
     var allOk = true;
     var showLoader = true;
 
-    for (final ing in ingredients) {
-      var recipeId = (ing.id ?? '').trim();
-      if (recipeId.isEmpty) {
-        recipeId = existingByMaterial[ing.rawMaterialId]?.id ?? '';
-      }
-
-      if (recipeId.isNotEmpty && existingById.containsKey(recipeId)) {
-        keptIds.add(recipeId);
-        final prev = existingById[recipeId]!;
-        if (prev.rawMaterialId == ing.rawMaterialId &&
-            prev.quantity == ing.quantity &&
-            prev.displayUnit.toUpperCase() == ing.unit.toUpperCase()) {
-          continue;
-        }
-        final res = await callApi(
-          apiClient.updateRecipe(outletId, recipeId, {
-            'userId': userId,
-            'rawMaterialId': ing.rawMaterialId,
-            'quantity': ing.quantity,
-            'unit': ing.unit,
-          }),
-          showLoader: showLoader,
-        );
-        showLoader = false;
-        if (res == null) allOk = false;
-      } else {
-        final res = await callApi(
-          apiClient.createRecipe(outletId, {
-            'userId': userId,
-            'outletId': outletId,
-            'itemId': itemId,
-            'rawMaterialId': ing.rawMaterialId,
-            'quantity': ing.quantity,
-            'unit': ing.unit,
-          }),
-          showLoader: showLoader,
-        );
-        showLoader = false;
-        if (res == null) allOk = false;
-      }
-    }
-
     for (final r in existing) {
-      if (!keptIds.contains(r.id)) {
-        final res = await callApi(
-          apiClient.deleteRecipe(outletId, r.id),
-          showLoader: false,
-        );
-        if (res == null) allOk = false;
-      }
+      if (claimed.contains(r.id)) continue;
+      final res = await callApi(
+        apiClient.deleteRecipe(outletId, r.id),
+        showLoader: showLoader,
+      );
+      showLoader = false;
+      if (res == null) allOk = false;
     }
 
-    await Future.wait([
-      loadRecipes(),
-      loadRawMaterials(),
-      loadTransactions(limit: 500),
-      loadDashboard(),
-    ]);
+    for (final entry in updates) {
+      final prev = existingById[entry.key]!;
+      final ing = entry.value;
+      if (prev.rawMaterialId == ing.rawMaterialId &&
+          (prev.quantity - ing.quantity).abs() < 1e-9 &&
+          prev.displayUnit.toUpperCase() == ing.unit.toUpperCase()) {
+        continue;
+      }
+      final res = await callApi(
+        apiClient.updateRecipe(outletId, entry.key, {
+          'userId': userId,
+          'rawMaterialId': ing.rawMaterialId,
+          'quantity': ing.quantity,
+          'unit': ing.unit,
+        }),
+        showLoader: showLoader,
+      );
+      showLoader = false;
+      if (res == null) allOk = false;
+    }
+
+    for (final ing in creates) {
+      final res = await callApi(
+        apiClient.createRecipe(outletId, {
+          'userId': userId,
+          'outletId': outletId,
+          'itemId': itemId,
+          'rawMaterialId': ing.rawMaterialId,
+          'quantity': ing.quantity,
+          'unit': ing.unit,
+        }),
+        showLoader: showLoader,
+      );
+      showLoader = false;
+      if (res == null) allOk = false;
+    }
+
+    await _refreshAfterRecipeChange();
     return allOk;
   }
 
-  Future<bool> updateRecipe({
-    required String id,
-    required String rawMaterialId,
-    required double quantity,
-  }) async {
-    final res = await callApi(
-      apiClient.updateRecipe(outletId, id, {
-        'userId': userId,
-        'rawMaterialId': rawMaterialId,
-        'quantity': quantity,
-      }),
-    );
-    if (res != null) {
-      await Future.wait([
-        loadRecipes(),
-        loadRawMaterials(),
-        loadTransactions(),
-        loadDashboard(),
-      ]);
-      return true;
-    }
-    return false;
-  }
-
   Future<bool> deleteRecipe(String id) async {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     final res = await callApi(apiClient.deleteRecipe(outletId, id));
     if (res != null) {
-      await Future.wait([
-        loadRecipes(),
-        loadRawMaterials(),
-        loadTransactions(),
-        loadDashboard(),
-      ]);
+      await _refreshAfterRecipeChange();
       return true;
     }
     return false;
@@ -1562,12 +1581,7 @@ class InventoryController extends BaseController {
       );
       if (res == null) allOk = false;
     }
-    await Future.wait([
-      loadRecipes(),
-      loadRawMaterials(),
-      loadTransactions(),
-      loadDashboard(),
-    ]);
+    await _refreshAfterRecipeChange();
     return allOk;
   }
 

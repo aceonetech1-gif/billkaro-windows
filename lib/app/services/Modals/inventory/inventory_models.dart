@@ -123,7 +123,9 @@ class RawMaterialData {
   }
 
   bool get isLowStock => currentStock <= minStock;
-  double get stockValue => currentStock * purchasePrice;
+  /// Stock can go negative after sales (billing is never blocked); a
+  /// shortfall has no value.
+  double get stockValue => currentStock > 0 ? currentStock * purchasePrice : 0;
   double get amount => stockValue;
   double get total => amount + (amount * taxRate / 100);
 
@@ -707,7 +709,7 @@ class ProductStockData {
 
   double get rate => costPrice > 0 ? costPrice : salePrice;
 
-  double get amount => stockQuantity * rate;
+  double get amount => stockQuantity > 0 ? stockQuantity * rate : 0;
 
   double get taxAmount => amount * taxPercent / 100;
 

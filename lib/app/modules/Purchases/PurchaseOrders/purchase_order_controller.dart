@@ -90,9 +90,12 @@ class PurchaseOrderController extends BaseController {
       apiClient.receivePurchaseOrder(outletId, poId, body),
     );
     if (res != null) {
-      await loadPurchaseOrders();
-      await inventory.loadRawMaterials();
-      await inventory.loadDashboard();
+      await Future.wait([
+        loadPurchaseOrders(),
+        inventory.loadRawMaterials(),
+        inventory.loadTransactions(),
+        inventory.loadDashboard(),
+      ]);
       return true;
     }
     return false;
@@ -184,6 +187,8 @@ class PurchaseOrderController extends BaseController {
 
   Future<bool> updatePurchaseOrder({
     required String poId,
+    /// PENDING promotes a draft; DRAFT keeps an existing draft as draft.
+    String? status,
     required String supplierId,
     required List<Map<String, dynamic>> items,
     String? notes,
@@ -251,6 +256,7 @@ class PurchaseOrderController extends BaseController {
       if (termsAndConditions != null && termsAndConditions.isNotEmpty)
         'termsAndConditions': termsAndConditions,
       'currency': 'INR',
+      if (status != null) 'status': status,
     };
     final res = await callApi(
       apiClient.updatePurchaseOrder(outletId, poId, body),
@@ -266,6 +272,7 @@ class PurchaseOrderController extends BaseController {
   }
 
   Future<bool> cancelPurchaseOrder(String poId) async {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     final res = await callApi(apiClient.cancelPurchaseOrder(outletId, poId));
     if (res != null) {
       unawaited(

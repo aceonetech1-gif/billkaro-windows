@@ -933,6 +933,8 @@
   "enable_inventory_subtitle": "Enable stock, suppliers, recipes and purchase orders",
   "add_details_on_create_order": "Add details on create order",
   "add_details_on_create_order_subtitle": "Show Add Details for customer, table, discount, and payment",
+  "auto_whatsapp_on_create_order": "Auto WhatsApp on create order",
+  "auto_whatsapp_on_create_order_subtitle": "Send order details to customer on WhatsApp after creating an order",
   "kitchen_display_in_browser": "Kitchen Display in browser",
   "kitchen_display_browser_subtitle": "Open the web kitchen screen on a second monitor or TV",
   "kitchen_display_browser_subtitle_device": "Open the web kitchen screen on a second device",

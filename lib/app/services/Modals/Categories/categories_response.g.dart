@@ -25,7 +25,7 @@ CategoryData _$CategoryDataFromJson(Map<String, dynamic> json) => CategoryData(
   imageURL: json['imageURL'] as String,
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
-  isActive: json['isActive'] as bool? ?? json['is_active'] as bool? ?? true,
+  isActive: json['isActive'] as bool? ?? true,
 );
 
 Map<String, dynamic> _$CategoryDataToJson(CategoryData instance) =>

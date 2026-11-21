@@ -1834,22 +1834,69 @@ class AddMenuItemController extends BaseController {
     final inventory = _inventoryController();
     await inventory.loadRecipeData();
     final materialId = linkedRawMaterialId.value.trim();
+    final material = inventory.rawMaterials.firstWhereOrNull(
+      (m) => m.id == materialId,
+    );
+    final materialUnit = (material?.unit.trim().isNotEmpty == true)
+        ? material!.unit
+        : 'NOS';
+    final existing = inventory.recipesForItem(savedItemId);
+
+    // Multi-ingredient recipe: the picker only shows its first line, so only
+    // that line may change — never wipe the other ingredients. (Switching to
+    // a linked recipe item still clears it: sales then use the linked item.)
+    if (existing.length > 1 && linkedRecipeItemId.value.trim().isEmpty) {
+      final shown = existing.first;
+      final lines = <RecipeLineInput>[
+        for (final r in existing)
+          if (r.id != shown.id)
+            RecipeLineInput(
+              id: r.id,
+              rawMaterialId: r.rawMaterialId,
+              quantity: r.quantity,
+              unit: r.displayUnit,
+            ),
+      ];
+      if (materialId.isNotEmpty &&
+          !lines.any((l) => l.rawMaterialId == materialId)) {
+        lines.insert(
+          0,
+          shown.rawMaterialId == materialId
+              ? RecipeLineInput(
+                  id: shown.id,
+                  rawMaterialId: shown.rawMaterialId,
+                  quantity: shown.quantity,
+                  unit: shown.displayUnit,
+                )
+              : RecipeLineInput(
+                  rawMaterialId: materialId,
+                  quantity: 1,
+                  unit: materialUnit,
+                ),
+        );
+      }
+      if (lines.isEmpty) {
+        await inventory.deleteRecipesForItem(savedItemId);
+      } else {
+        await inventory.saveRecipesForItem(
+          itemId: savedItemId,
+          ingredients: lines,
+        );
+      }
+      return;
+    }
+
     if (materialId.isEmpty) {
       await inventory.deleteRecipesForItem(savedItemId);
       return;
     }
-    final material = inventory.rawMaterials.firstWhereOrNull(
-      (m) => m.id == materialId,
-    );
     await inventory.saveRecipesForItem(
       itemId: savedItemId,
       ingredients: [
         RecipeLineInput(
           rawMaterialId: materialId,
           quantity: 1,
-          unit: (material?.unit.trim().isNotEmpty == true)
-              ? material!.unit
-              : 'NOS',
+          unit: materialUnit,
         ),
       ],
     );

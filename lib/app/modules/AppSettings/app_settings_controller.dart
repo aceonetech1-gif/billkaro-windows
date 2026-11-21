@@ -37,6 +37,7 @@ class AppSettingsController extends BaseController {
   late final RxString billHeaderMessage;
   late final RxString billFooterMessage;
   late final RxBool inventoryEnabled;
+  late final RxBool autoWhatsAppOnCreateOrder;
   late final RxBool _showAddDetailsOnCreateOrder;
   RxBool get showAddDetailsOnCreateOrder => _showAddDetailsOnCreateOrder;
   late final RxBool kotModeEnabled;
@@ -85,6 +86,7 @@ class AppSettingsController extends BaseController {
     billHeaderMessage = appPref.billHeaderMessage.obs;
     billFooterMessage = appPref.billFooterMessage.obs;
     inventoryEnabled = appPref.inventoryEnabled.obs;
+    autoWhatsAppOnCreateOrder = appPref.autoWhatsAppOnCreateOrder.obs;
     _showAddDetailsOnCreateOrder = appPref.showAddDetailsOnCreateOrder.obs;
     kotModeEnabled = appPref.isKOT.obs;
     autoSyncEnabled = appPref.autoSyncEnabled.obs;
@@ -277,6 +279,11 @@ class AppSettingsController extends BaseController {
     billHeaderMessage.value = header.trim();
     billFooterMessage.value = footer.trim();
     return true;
+  }
+
+  void setAutoWhatsAppOnCreateOrder(bool value) {
+    appPref.autoWhatsAppOnCreateOrder = value;
+    autoWhatsAppOnCreateOrder.value = value;
   }
 
   void setInventoryEnabled(bool value) {
