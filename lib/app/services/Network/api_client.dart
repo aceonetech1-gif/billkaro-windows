@@ -184,9 +184,7 @@ abstract class ApiClient {
   // -------------------- RAW MATERIAL CATEGORIES --------------------
 
   @GET('$outlets/{outletId}/raw-material-categories')
-  Future<dynamic> getRawMaterialCategories(
-    @Path('outletId') String outletId,
-  );
+  Future<dynamic> getRawMaterialCategories(@Path('outletId') String outletId);
 
   @POST('$outlets/{outletId}/raw-material-categories')
   Future<dynamic> addRawMaterialCategory(
@@ -615,6 +613,7 @@ abstract class ApiClient {
     @Query('type') String? type,
     @Query('page') int? page,
     @Query('limit') int? limit, [
+
     /// YYYY-MM-DD; restricts to that calendar day.
     @Query('date') String? date,
   ]);
